@@ -1,0 +1,67 @@
+var player = $("<div class='player-worm'></div>");
+    // Get the parent li index
+    var currentIndex = player.parent().index();
+
+    // Random number generator 1-10
+    var randomNum = Math.floor(Math.random() * 9) + 2;
+
+    // List item generation
+    for (var i = 1; i <= randomNum; i++){
+        $("#gameList").append("<li>" + i + "</li>");
+    }
+
+    var gameItems = $("#gameList > li");
+
+    // The friend worm should not start at 0. Player starts there
+    var choices = gameItems.not(":eq(0)");
+
+    // Select a random list item for the friend
+    var friendItem = choices.eq(
+        Math.floor(Math.random() * choices.length)
+    );
+
+    // Add friend worm to the selected item
+    friendItem.append('<div class="worm friend-worm"></div>');
+
+    $("#startBtn").on("click", function(){
+        // Player goes on first list item
+        gameItems.eq(0).append(player);
+        
+        $(this).hide();
+    });
+
+    $(document).on("keydown", function(e){
+        // Avoid movement logic if player is null
+        if (!player.parent("li").length){
+            return;
+        }
+
+        switch (e.key) {
+            case "ArrowUp":
+                e.preventDefault();
+                moveUp();
+                break;
+            case "ArrowDown":
+                e.preventDefault();
+                moveDown();
+                break;
+        }
+    });
+
+    function moveUp(){
+        var currentLi = player.parent("li");
+        var previousLi = currentLi.prev("li");
+
+        if (previousLi.length){
+            player.appendTo(previousLi);
+        }
+    }
+
+    function moveDown(){
+        var currentLi = player.parent("li");
+        var nextLi = currentLi.next("li");
+
+        if (nextLi.length){
+            player.appendTo(nextLi);
+        }
+    }

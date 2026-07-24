@@ -1,70 +1,63 @@
 jQuery(function($){
 
-    var player = $("<div class='player-worm'></div>");
-    // Get the parent li index
+    var player = $(".js-player");
+    var friend = $(".js-friend");
+    var rabbithole = $("#game");
+
+    // Get the player parent list index
     var currentIndex = player.parent().index();
 
-    // Random number generator 1-10
+    // Random num generation 1-10 for random list amounts
     var randomNum = Math.floor(Math.random() * 9) + 2;
 
-    // List item generation
-    for (var i = 1; i <= randomNum; i++){
-        $("#gameList").append("<li>" + i + "</li>");
-    }
-
-    var gameItems = $("#gameList > li");
-
-    // The friend worm should not start at 0. Player starts there
-    var choices = gameItems.not(":eq(0)");
-
-    // Select a random list item for the friend
-    var friendItem = choices.eq(
-        Math.floor(Math.random() * choices.length)
-    );
-
-    // Add friend worm to the selected item
-    friendItem.append('<div class="worm friend-worm"></div>');
-
     $("#startBtn").on("click", function(){
-        // Player goes on first list item
-        gameItems.eq(0).append(player);
-        
+        for (var i = 0; i <= randomNum; i++){
+            // Create new path and save the list to a var
+            var newLi = $("<li></li>");
+
+            // Append the path to the game area
+            $(rabbithole).append(newLi);
+
+            // Append the friend to the newest list
+            newLi.append(friend);
+        }
         $(this).hide();
     });
 
     $(document).on("keydown", function(e){
-        // Avoid movement logic if player is null
-        if (!player.parent("li").length){
-            return;
-        }
-
-        switch (e.key) {
+        switch (e.key){
             case "ArrowUp":
                 e.preventDefault();
-                moveUp();
+                moveStep(-1); // Backward
                 break;
             case "ArrowDown":
                 e.preventDefault();
-                moveDown();
+                moveStep(1); // Forward
                 break;
         }
     });
 
-    function moveUp(){
-        var currentLi = player.parent("li");
-        var previousLi = currentLi.prev("li");
+    function moveStep(direction){
+        // Grab all moveable areas
+        var allTiles = $("#root *").filter(function(){
+            var $this = $(this);
 
-        if (previousLi.length){
-            player.appendTo(previousLi);
+            // Valid areas
+            return ($this.is("li")) && $this.find("ul").length === 0;
+        })
+
+        // Locate where player stands
+        var currentTile = player.parent();
+        var currentIndex = allTiles.index(currentTile);
+
+        // Calculate the target index destination
+        var targetIndex = currentIndex + direction;
+
+        // Move if within the map boundaries
+        if (targetIndex >= 0 && targetIndex < allTiles.length){
+            var targetTile = allTiles.eq(targetIndex);
+            player.appendTo(targetTile);
         }
     }
 
-    function moveDown(){
-        var currentLi = player.parent("li");
-        var nextLi = currentLi.next("li");
-
-        if (nextLi.length){
-            player.appendTo(nextLi);
-        }
-    }
 });

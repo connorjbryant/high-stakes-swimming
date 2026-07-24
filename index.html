@@ -11,7 +11,17 @@
 <body>
     <main>
         <button id="startBtn">Start</button>
-        <ul id="gameList"></ul>
+        <ul id="root">
+            <li id="start">
+                <div class="player-worm js-player"></div>
+            </li>
+            <li>
+                <div class="player-friend js-friend"></div>
+            </li>
+            <li>
+                <ul id="game"></ul>
+            </li>
+        </ul>
     </main>
     <script>
         if (navigator.serviceWorker) {
