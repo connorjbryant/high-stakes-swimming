@@ -47,10 +47,12 @@ jQuery(function($){
 
     $(document).on("swipeleft", function(){
         moveStep(-1);
+        checkOverlap();
     });
 
     $(document).on("swiperight", function(){
         moveStep(1);
+        checkOverlap();
     });
 
     function moveStep(direction){
