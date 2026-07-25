@@ -37,11 +37,11 @@ jQuery(function($){
         }
     });
 
-    $(document).on("swipeup", function(){
+    $(document).on("swipeleft", function(){
         moveStep(-1);
     });
 
-    $(document).on("swipedown", function(){
+    $(document).on("swiperight", function(){
         moveStep(1);
     });
 
