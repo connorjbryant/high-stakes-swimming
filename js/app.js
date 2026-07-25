@@ -17,10 +17,16 @@ jQuery(function($){
 
             // Append the path to the game area
             $(rabbithole).append(newLi);
-
-            // Append the friend to the newest list
-            newLi.append(friend);
         }
+        // Find all paths in the rabbithole
+        var allLis = $(rabbithole).find("li");
+
+        // Pick a random index based on the num of paths
+        var randomIndex = Math.floor(Math.random() * allLis.length);
+
+        // Append the friend to the random path
+        allLis.eq(randomIndex).append(friend).addClass("checkpoint");
+
         $(this).hide();
     });
 
@@ -29,10 +35,12 @@ jQuery(function($){
             case "ArrowUp":
                 e.preventDefault();
                 moveStep(-1); // Backward
+                checkOverlap();
                 break;
             case "ArrowDown":
                 e.preventDefault();
                 moveStep(1); // Forward
+                checkOverlap();
                 break;
         }
     });
@@ -47,12 +55,7 @@ jQuery(function($){
 
     function moveStep(direction){
         // Grab all moveable areas
-        var allTiles = $("#root *").filter(function(){
-            var $this = $(this);
-
-            // Valid areas
-            return ($this.is("li")) && $this.find("ul").length === 0;
-        })
+        var allTiles = $(rabbithole).find("li");
 
         // Locate where player stands
         var currentTile = player.parent();
@@ -63,9 +66,37 @@ jQuery(function($){
 
         // Move if within the map boundaries
         if (targetIndex >= 0 && targetIndex < allTiles.length){
+            currentTile.removeClass("checkpoint");
             var targetTile = allTiles.eq(targetIndex);
             player.appendTo(targetTile);
         }
+    }
+
+    function checkOverlap(){
+        $(".checkpoint").each(function(){
+            // Check if an li has the player and friend
+            if (this.contains(player[0]) && this.contains(friend[0])){
+                console.log("overlap");
+                spawnPaths($(this));
+            }
+        })
+    }
+
+    function spawnPaths(activeTile){
+        activeTile.removeClass("checkpoint");
+        var freshRandomNum = Math.floor(Math.random() * 9) + 2;
+        var newUl = $("<ul></ul>");
+        for (var i = 0; i <= freshRandomNum; i++){
+            newUl.append("<li></li>");
+        }
+        activeTile.append(newUl);
+        // Isolate the choices to the new paths
+        var newLis = newUl.find("li");
+
+        // Pick a random index based on the num of paths for the friend again
+        var randomIndex = Math.floor(Math.random() * newLis.length);
+
+        newLis.eq(randomIndex).append(friend).addClass("checkpoint");
     }
 
 });
