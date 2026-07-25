@@ -160,6 +160,7 @@ jQuery(function($){
 
         alert("game over");
         $("#startBtn").show().text("Try Again?");
+        location.reload();
     }
 
 });
