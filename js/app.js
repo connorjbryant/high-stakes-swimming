@@ -21,7 +21,8 @@ jQuery(function($){
         var randomIndex = Math.floor(Math.random() * allLis.length);
 
         // Append the friend to the random path
-        allLis.eq(randomIndex).append(friend).addClass("checkpoint");
+        //allLis.eq(randomIndex).append(friend).addClass("checkpoint");
+        allLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
 
         $(this).hide();
 
@@ -120,7 +121,8 @@ jQuery(function($){
         if (playerTile === friendTile){
             console.log("correct");
 
-            var activeTile = $(".checkpoint");
+            //var activeTile = $(".checkpoint");
+            var activeTile = $("#checkpoint");
             spawnPaths(activeTile);
         } else {
             console.log("wrong");
@@ -139,7 +141,8 @@ jQuery(function($){
     // }
 
     function spawnPaths(activeTile){
-        activeTile.removeClass("checkpoint");
+        //activeTile.removeClass("checkpoint");
+        activeTile.removeAttr("id");
         var freshRandomNum = Math.floor(Math.random() * 6) + 2;
         var newUl = $("<ul></ul>");
         for (var i = 0; i <= freshRandomNum; i++){
@@ -152,7 +155,8 @@ jQuery(function($){
         // Pick a random index based on the num of paths for the friend again
         var randomIndex = Math.floor(Math.random() * newLis.length);
 
-        newLis.eq(randomIndex).append(friend).addClass("checkpoint");
+        //newLis.eq(randomIndex).append(friend).addClass("#checkpoint");
+        newLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
     }
 
     function gameOver(){
