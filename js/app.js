@@ -157,6 +157,10 @@ jQuery(function($){
 
         //newLis.eq(randomIndex).append(friend).addClass("#checkpoint");
         newLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
+
+        $("html, body").animate({
+            scrollTop: newLis.eq(randomIndex).offset().top - ($(window).height() / 2)
+        }, 500);
     }
 
     function gameOver(){
