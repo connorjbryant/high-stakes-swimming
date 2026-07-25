@@ -37,6 +37,14 @@ jQuery(function($){
         }
     });
 
+    $(document).on("swipeup", function(){
+        moveStep(-1);
+    });
+
+    $(document).on("swipedown", function(){
+        moveStep(1);
+    });
+
     function moveStep(direction){
         // Grab all moveable areas
         var allTiles = $("#root *").filter(function(){
