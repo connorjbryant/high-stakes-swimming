@@ -8,7 +8,7 @@ jQuery(function($){
     var autoMoveTimer = null;
     var moveDirection = 1;
     // Random num generation 1-10 for random list amounts
-    var randomNum = Math.floor(Math.random() * 4) + 2;
+    var randomNum = Math.floor(Math.random() * 6) + 2;
 
     $("#startBtn").on("click", function(){
         for (var i = 0; i <= randomNum; i++){
@@ -140,7 +140,7 @@ jQuery(function($){
 
     function spawnPaths(activeTile){
         activeTile.removeClass("checkpoint");
-        var freshRandomNum = Math.floor(Math.random() * 4) + 2;
+        var freshRandomNum = Math.floor(Math.random() * 6) + 2;
         var newUl = $("<ul></ul>");
         for (var i = 0; i <= freshRandomNum; i++){
             newUl.append("<li></li>");
