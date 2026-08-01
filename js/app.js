@@ -109,8 +109,11 @@ jQuery(function($){
         }
     });
 
-    $(document).on("click itnotstartbtn", function(e){
-        if ($(e.target).is("#startBtn")) return;
+    $(document).on("click", function (event) {
+        if ($(event.target).is("#startBtn")) {
+            return;
+        }
+
         attemptAdvance();
     });
 
