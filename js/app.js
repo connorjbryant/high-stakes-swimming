@@ -6,14 +6,14 @@ jQuery(function($){
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // Camera pos for hallways
-    camera.position.set(0, 2, 8);
+    camera.position.set(0, 0, 10);
     camera.lookAt(0, 0, -5);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
     const pointLight = new THREE.PointLight(0xffffff, 1.5, 30);
-    pointLight.position.set(0, 3, 5);
+    pointLight.position.set(0, 0, 5);
     scene.add(pointLight);
 
     let targetCameraZ = 8;
@@ -35,9 +35,11 @@ jQuery(function($){
         // Grab all list elements from game loop
         const totalOptions = $(rabbithole).find("li");
 
+        const isMobile = $(window).width() < 768;
+
         totalOptions.each(function(index){
             const spacing = 5;
-            const xPosition = (index - (totalOptions.length - 1) / 2) * spacing;
+            const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
 
             // Basic wireframe hallway box
             const geometry = new THREE.BoxGeometry(4, 4, 15);
@@ -60,7 +62,11 @@ jQuery(function($){
             const line = new THREE.LineSegments(edges, lineMat);
             boxMesh.add(line);
 
-            boxMesh.position.set(xPosition, 0, -7.5);
+            if (isMobile){
+                boxMesh.position.set(0, layoutOffset, -7.5);
+            } else {
+                boxMesh.position.set(layoutOffset, 0, -7.5);
+            }
             scene.add(boxMesh);
             visualCorridors.push(boxMesh);
         })
@@ -251,6 +257,7 @@ jQuery(function($){
         camera.aspect = $(window).width() / $(window).height();
         camera.updateProjectionMatrix();
         renderer.setSize($(window).width(), $(window).height());
+        draw3DCorridors();
     })
 
 });
