@@ -9,20 +9,30 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <main>
+
+    <canvas id="three-canvas"></canvas>
+
+    <div id="ui">
         <button id="startBtn">Start</button>
-        <ul id="root">
-            <li id="start">
-                <div class="player-worm js-player"></div>
-            </li>
-            <li>
-                <div class="player-friend js-friend"></div>
-            </li>
-            <li>
-                <ul id="game"></ul>
-            </li>
-        </ul>
-    </main>
+        <p id="msg">CLick anywhere to try and advance!</p>
+    </div>
+
+    <div id="game-blueprint">
+        <main>
+            <ul id="root">
+                <li id="start">
+                    <div class="player-worm js-player"></div>
+                </li>
+                <li>
+                    <div class="player-friend js-friend"></div>
+                </li>
+                <li>
+                    <ul id="game"></ul>
+                </li>
+            </ul>
+        </main>
+    </div>
+        
     <script>
         if (navigator.serviceWorker) {
             navigator.serviceWorker.register (
@@ -33,6 +43,7 @@
     </script>
     <script src="js/jquery-4.0.0.min.js"></script>
     <script src="js/jquery.mobile-events.min.js"></script>
+    <script src="js/three.min.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
