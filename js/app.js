@@ -29,48 +29,83 @@ jQuery(function($){
 
     // 3D translator function
     function draw3DCorridors(){
-        visualCorridors.forEach(box => scene.remove(box));
+        visualCorridors.forEach(group => scene.remove(group));
         visualCorridors = [];
 
-        // Grab all list elements from game loop
         const totalOptions = $(rabbithole).find("li");
-
         const isMobile = $(window).width() < 768;
 
         totalOptions.each(function(index){
             const spacing = 5;
             const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
 
-            // Basic wireframe hallway box
-            const geometry = new THREE.BoxGeometry(4, 4, 15);
+            // 1. Create a 3D Group to hold our individual walls
+            const corridorGroup = new THREE.Group();
 
-            // Mechanic visual
+            // 2. Define our dimensions
+            const w = 4;  // Width of tunnel
+            const h = 4;  // Height of tunnel
+            const d = 15; // Length of tunnel
+
+            // 3. Mechanic colors: Green/Mint for checkpoint, retro Wolfenstein blue/grey for walls
             const isCheckpoint = ($(this).attr("id") === "checkpoint");
+            const wallColor = isCheckpoint ? 0x113322 : 0x1a2536; 
+            const trimColor = isCheckpoint ? 0x00ffcc : 0xff00ff;
 
-            const boxColor = isCheckpoint ? 0x00ffcc : 0xff00ff;
+            // 4. Create standard light-reactive wall materials
+            const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.7 });
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 }); // Dark floor
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1.0 });  // Dark ceiling
+            const trimMat = new THREE.LineBasicMaterial({ color: trimColor });
 
-            const material = new THREE.MeshStandardMaterial({
-                color: boxColor,
-                roughness: 0.4,
-                metalness: 0.2,
-                side: THREE.BackSide
-            });
-            const boxMesh = new THREE.Mesh(geometry, material);
+            // Left Wall
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
+            leftWall.position.set(-w/2, 0, -d/2);
+            leftWall.rotation.y = Math.PI / 2;
+            corridorGroup.add(leftWall);
 
-            const edges = new THREE.EdgesGeometry(geometry);
-            const lineMat = new THREE.LineBasicMaterial({color: isCheckpoint ? 0x00ffcc : 0xff00ff });
-            const line = new THREE.LineSegments(edges, lineMat);
-            boxMesh.add(line);
+            // Right Wall
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
+            rightWall.position.set(w/2, 0, -d/2);
+            rightWall.rotation.y = -Math.PI / 2;
+            corridorGroup.add(rightWall);
 
-            if (isMobile){
-                boxMesh.position.set(0, layoutOffset, -7.5);
+            // Floor
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
+            floor.position.set(0, -h/2, -d/2);
+            floor.rotation.x = -Math.PI / 2;
+            corridorGroup.add(floor);
+
+            // Ceiling
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(w, d), roofMat);
+            ceiling.position.set(0, h/2, -d/2);
+            ceiling.rotation.x = Math.PI / 2;
+            corridorGroup.add(ceiling);
+
+            // 5. Add retro neon door trims on the entrance and exits
+            const entranceGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-w/2, -h/2, 0), new THREE.Vector3(-w/2, h/2, 0),
+                new THREE.Vector3(w/2, h/2, 0), new THREE.Vector3(w/2, -h/2, 0)
+            ]);
+            const exitGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-w/2, -h/2, -d), new THREE.Vector3(-w/2, h/2, -d),
+                new THREE.Vector3(w/2, h/2, -d), new THREE.Vector3(w/2, -h/2, -d)
+            ]);
+            corridorGroup.add(new THREE.Line(entranceGeom, trimMat));
+            corridorGroup.add(new THREE.Line(exitGeom, trimMat));
+
+            // 6. Positioning the entire group adaptively
+            if (isMobile) {
+                corridorGroup.position.set(0, layoutOffset, 0);
             } else {
-                boxMesh.position.set(layoutOffset, 0, -7.5);
+                corridorGroup.position.set(layoutOffset, 0, 0);
             }
-            scene.add(boxMesh);
-            visualCorridors.push(boxMesh);
-        })
+
+            scene.add(corridorGroup);
+            visualCorridors.push(corridorGroup); // Save group reference for the pulsing scales
+        });
     }
+
 
     var player = $(".js-player");
     var friend = $(".js-friend");
@@ -198,24 +233,43 @@ jQuery(function($){
     function attemptAdvance(){
         var playerTile = player.parent();
         var friendTile = friend.parent();
-
+        
         if (playerTile.length && friendTile.length && playerTile.is(friendTile)){
             console.log("correct");
-
-            //var activeTile = $(".checkpoint");
             var activeTile = $("#checkpoint");
+            
+            // Find which specific hallway index index was the winner
+            var allTiles = $(rabbithole).find("> li");
+            var winIndex = allTiles.index(activeTile);
+            
+            const spacing = 5;
+            const offsetPosition = (winIndex - (allTiles.length - 1) / 2) * spacing;
+            const isMobile = $(window).width() < 768;
 
-            targetCameraZ = -5;
-
+            // 1. DIVE PHASE: Lock camera directly inside the chosen hallway coordinates
+            if (isMobile) {
+                camera.position.y = offsetPosition; // Snap side alignment instantly
+                targetCameraZ = -14;                // Rush straight down the length of the hall
+            } else {
+                camera.position.x = offsetPosition; // Snap side alignment instantly
+                targetCameraZ = -14;                // Rush straight down the length of the hall
+            }
+            
+            // 2. WAIT AND RESET PHASE
             setTimeout(function(){
                 spawnPaths(activeTile);
-                targetCameraZ = 8;
-            }, 400);
+                
+                // Seamlessly pop camera back to center view for the next overview choices
+                camera.position.set(0, 0, 10); 
+                targetCameraZ = 10;
+            }, 500); // 500ms allows a full first person fly-through sequence
+            
         } else {
             console.log("wrong");
             gameOver();
         }
     }
+
 
     // function checkOverlap(){
     //     $(".checkpoint").each(function(){
