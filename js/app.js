@@ -6,19 +6,20 @@ jQuery(function($){
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // Camera pos for hallways
-    camera.position.set(0, 0, 10);
+    camera.position.set(0, 0, 8);
     camera.lookAt(0, 0, -5);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0xffffff, 1.5, 30);
-    pointLight.position.set(0, 0, 5);
+    const pointLight = new THREE.PointLight(0xffffff, 0.8, 60);
+    pointLight.position.set(0, 2, 2);
     scene.add(pointLight);
 
     let targetCameraZ = 8;
-
     let visualCorridors = [];
+    let roomGroup = null; // Container to manage global room geometry cleanly
+    let selectionMarker = null;
 
     function animate(){
         requestAnimationFrame(animate);
@@ -32,89 +33,127 @@ jQuery(function($){
         visualCorridors.forEach(group => scene.remove(group));
         visualCorridors = [];
 
+        if (roomGroup) scene.remove(roomGroup);
+        roomGroup = new THREE.Group();
+
         const totalOptions = $(rabbithole).find("li");
         const isMobile = $(window).width() < 768;
+        targetCameraZ = 8;
+
+        const spacing = 5;
+        const w = spacing;
+        const h = 4;
+        const d= 15;
+        const roomWidth = totalOptions.length * spacing;
 
         totalOptions.each(function(index){
-            const spacing = 5;
             const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
 
-            // 1. Create a 3D Group to hold our individual walls
             const corridorGroup = new THREE.Group();
 
-            // 2. Define our dimensions
-            const w = 4;  // Width of tunnel
-            const h = 4;  // Height of tunnel
-            const d = 15; // Length of tunnel
-
-            // 3. Mechanic colors: Green/Mint for checkpoint, retro Wolfenstein blue/grey for walls
             const isCheckpoint = ($(this).attr("id") === "checkpoint");
             const wallColor = isCheckpoint ? 0x113322 : 0x1a2536; 
             const trimColor = isCheckpoint ? 0x00ffcc : 0xff00ff;
 
-            // 4. Create standard light-reactive wall materials
-            const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.7 });
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 }); // Dark floor
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1.0 });  // Dark ceiling
-            const trimMat = new THREE.LineBasicMaterial({ color: trimColor });
+            const corridorWallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.6, side: THREE.DoubleSide });
+            const trimMat = new THREE.LineBasicMaterial({ color: trimColor, linewidth: 2 });
 
             // Left Wall
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
-            leftWall.position.set(-w/2, 0, -d/2);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
+            leftWall.position.set(-w/2, 0, 0);
             leftWall.rotation.y = Math.PI / 2;
             corridorGroup.add(leftWall);
 
             // Right Wall
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
-            rightWall.position.set(w/2, 0, -d/2);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
+            rightWall.position.set(w/2, 0, 0);
             rightWall.rotation.y = -Math.PI / 2;
             corridorGroup.add(rightWall);
 
-            // Floor
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
-            floor.position.set(0, -h/2, -d/2);
-            floor.rotation.x = -Math.PI / 2;
-            corridorGroup.add(floor);
+            const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.8 });
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), backWallMat);
+            backWall.position.set(0, 0, -d/2);
+            corridorGroup.add(backWall);
 
-            // Ceiling
-            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(w, d), roofMat);
-            ceiling.position.set(0, h/2, -d/2);
-            ceiling.rotation.x = Math.PI / 2;
-            corridorGroup.add(ceiling);
-
-            // 5. Add retro neon door trims on the entrance and exits
+            // Neon door trims on entrance and exit
             const entranceGeom = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-w/2, -h/2, 0), new THREE.Vector3(-w/2, h/2, 0),
-                new THREE.Vector3(w/2, h/2, 0), new THREE.Vector3(w/2, -h/2, 0)
+                new THREE.Vector3(-w/2, -h/2, d/2), new THREE.Vector3(-w/2, h/2, d/2),
+                new THREE.Vector3(w/2, h/2, d/2), new THREE.Vector3(w/2, -h/2, d/2),
+                new THREE.Vector3(-w/2, -h/2, d/2)
             ]);
             const exitGeom = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-w/2, -h/2, -d), new THREE.Vector3(-w/2, h/2, -d),
-                new THREE.Vector3(w/2, h/2, -d), new THREE.Vector3(w/2, -h/2, -d)
+                new THREE.Vector3(-w/2, -h/2, -d/2), new THREE.Vector3(-w/2, h/2, -d/2),
+                new THREE.Vector3(w/2, h/2, -d/2), new THREE.Vector3(w/2, -h/2, -d/2),
+                new THREE.Vector3(-w/2, -h/2, -d/2)
             ]);
             corridorGroup.add(new THREE.Line(entranceGeom, trimMat));
             corridorGroup.add(new THREE.Line(exitGeom, trimMat));
 
-            // 6. Positioning the entire group adaptively
-            if (isMobile) {
-                corridorGroup.position.set(0, layoutOffset, 0);
-            } else {
-                corridorGroup.position.set(layoutOffset, 0, 0);
-            }
+            corridorGroup.position.set(layoutOffset, 0, -d/2);
 
             scene.add(corridorGroup);
-            visualCorridors.push(corridorGroup); // Save group reference for the pulsing scales
+            visualCorridors.push(corridorGroup);
         });
-    }
 
+        // Shared Room Structure
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x181820, roughness: 0.4, side: THREE.DoubleSide });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.5, side: THREE.DoubleSide });
+        const outerWallMat = new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.7, side: THREE.DoubleSide });
+
+        const globalFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, d + 10), floorMat);
+        globalFloor.position.set(0, -h / 2, -d / 2 + 5);
+        globalFloor.rotation.x = -Math.PI / 2;
+        roomGroup.add(globalFloor);
+
+        const globalCeiling = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, d + 10), roofMat);
+        globalCeiling.position.set(0, h / 2, -d / 2 + 5);
+        globalCeiling.rotation.x = Math.PI / 2;
+        roomGroup.add(globalCeiling);
+
+        const farLeftWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 10, h), outerWallMat);
+        farLeftWall.position.set(-roomWidth / 2, 0, -d / 2 + 5);
+        farLeftWall.rotation.y = Math.PI / 2;
+        roomGroup.add(farLeftWall);
+
+        const farRightWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 10, h), outerWallMat);
+        farRightWall.position.set(roomWidth / 2, 0, -d / 2 + 5);
+        farRightWall.rotation.y = -Math.PI / 2;
+        roomGroup.add(farRightWall);
+
+        // Floor and Ceiling Grid Helpers (fixed THREE.GridHelper spelling)
+        // const floorGrid = new THREE.GridHelper(roomWidth, totalOptions.length, 0x00ffcc, 0x334455);
+        // floorGrid.position.set(0, -h / 2 + 0.01, -d / 2);
+        // roomGroup.add(floorGrid);
+
+        // const ceilingGrid = new THREE.GridHelper(roomWidth, totalOptions.length, 0xff00ff, 0x334455);
+        // ceilingGrid.position.set(0, h / 2 - 0.01, -d / 2);
+        // roomGroup.add(ceilingGrid);
+
+        const globalBackWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, h), outerWallMat);
+        globalBackWall.position.set(0, 0, -d);
+        roomGroup.add(globalBackWall);
+
+        if (selectionMarker) scene.remove(selectionMarker);
+        const markerGeom = new THREE.RingGeometry(0.8, 1.2, 32);
+        const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide });
+        selectionMarker = new THREE.Mesh(markerGeom, markerMat);
+        selectionMarker.rotation.x = Math.PI / 2;
+
+        const initialTiles = $(rabbithole).find("li");
+        const pIndex = initialTiles.index(player.parent());
+        const startX = pIndex > -1 ? (pIndex - (initialTiles - 1) / 2) * spacing : 0;
+        selectionMarker.position.set(startX, -h / 2 + 0.08, 2.5);
+        scene.add(selectionMarker);
+
+        scene.add(roomGroup);
+    }
 
     var player = $(".js-player");
     var friend = $(".js-friend");
     var rabbithole = $("#game");
 
-    // Game vars
     var autoMoveTimer = null;
     var moveDirection = 1;
-    // Random num generation 1-10 for random list amounts
     var randomNum = Math.floor(Math.random() * 4) + 2;
 
     $("#startBtn").on("click", function(e){
@@ -123,14 +162,9 @@ jQuery(function($){
         for (var i = 0; i <= randomNum; i++){
             $(rabbithole).append("<li></li>");
         }
-        // Find all paths in the rabbithole
         var allLis = $(rabbithole).find("li");
-
-        // Pick a random index based on the num of paths
+        allLis.eq(0).append(player);
         var randomIndex = Math.floor(Math.random() * allLis.length);
-
-        // Append the friend to the random path
-        //allLis.eq(randomIndex).append(friend).addClass("checkpoint");
         allLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
 
         $(this).hide();
@@ -138,63 +172,20 @@ jQuery(function($){
         startAutoMovement();
     });
 
-    // $(document).on("keydown", function(e){
-    //     switch (e.key){
-    //         case "ArrowUp":
-    //             e.preventDefault();
-    //             moveStep(-1); // Backward
-    //             checkOverlap();
-    //             break;
-    //         case "ArrowDown":
-    //             e.preventDefault();
-    //             moveStep(1); // Forward
-    //             checkOverlap();
-    //             break;
-    //     }
-    // });
-
-    // $(document).on("swipeleft", function(){
-    //     moveStep(-1);
-    //     checkOverlap();
-    // });
-
-    // $(document).on("swiperight", function(){
-    //     moveStep(1);
-    //     checkOverlap();
-    // });
-
-    // function moveStep(direction){
-    //     // Grab all moveable areas
-    //     var allTiles = $(rabbithole).find("li");
-
-    //     // Locate where player stands
-    //     var currentTile = player.parent();
-    //     var currentIndex = allTiles.index(currentTile);
-
-    //     // Calculate the target index destination
-    //     var targetIndex = currentIndex + direction;
-
-    //     // Move if within the map boundaries
-    //     if (targetIndex >= 0 && targetIndex < allTiles.length){
-    //         currentTile.removeClass("checkpoint");
-    //         var targetTile = allTiles.eq(targetIndex);
-    //         player.appendTo(targetTile);
-    //     }
-    // }
-
     function startAutoMovement(){
-        // Grab all moveable areas
-
         clearInterval(autoMoveTimer);
+
+        var initialTiles = $(rabbithole).find("li");
+        var initialIndex = initialTiles.index(player.parent());
+        if (selectionMarker && initialIndex !== -1){
+            const spacing = 5;
+            selectionMarker.position.x = (initialIndex - (initialTiles.length - 1) /2) * spacing;
+        }
 
         autoMoveTimer = setInterval(function(){
             var allTiles = $(rabbithole).find("li");
-
-            // Locate where player stands
             var currentTile = player.parent();
             var currentIndex = allTiles.index(currentTile);
-
-            // Calculate the target index destination
             var targetIndex = currentIndex + moveDirection;
 
             if (targetIndex >= allTiles.length){
@@ -208,15 +199,14 @@ jQuery(function($){
             var targetTile = allTiles.eq(targetIndex);
             player.appendTo(targetTile);
 
-            visualCorridors.forEach((box, idx) => {
-                if (idx === targetIndex){
-                    box.scale.set(1.1, 1.1, 1);
-                } else {
-                    box.scale.set(1, 1, 1);
-                }
-            });
+            visualCorridors.forEach(box => box.scale.set(1, 1, 1));
+
+            if (selectionMarker) {
+                const spacing = 5;
+                const activeX = (targetIndex - (allTiles.length - 1) / 2) * spacing;
+                selectionMarker.position.x = activeX;
+            }
         }, 400);
-        
     }
 
     $(document).on("keydown", function(e){
@@ -228,7 +218,7 @@ jQuery(function($){
 
     $("#three-canvas").on("click", function(event){
         attemptAdvance();
-    })
+    });
 
     function attemptAdvance(){
         var playerTile = player.parent();
@@ -238,31 +228,20 @@ jQuery(function($){
             console.log("correct");
             var activeTile = $("#checkpoint");
             
-            // Find which specific hallway index index was the winner
             var allTiles = $(rabbithole).find("> li");
             var winIndex = allTiles.index(activeTile);
             
             const spacing = 5;
             const offsetPosition = (winIndex - (allTiles.length - 1) / 2) * spacing;
-            const isMobile = $(window).width() < 768;
 
-            // 1. DIVE PHASE: Lock camera directly inside the chosen hallway coordinates
-            if (isMobile) {
-                camera.position.y = offsetPosition; // Snap side alignment instantly
-                targetCameraZ = -14;                // Rush straight down the length of the hall
-            } else {
-                camera.position.x = offsetPosition; // Snap side alignment instantly
-                targetCameraZ = -14;                // Rush straight down the length of the hall
-            }
+            camera.position.x = offsetPosition;
+            targetCameraZ = -14;
             
-            // 2. WAIT AND RESET PHASE
             setTimeout(function(){
                 spawnPaths(activeTile);
-                
-                // Seamlessly pop camera back to center view for the next overview choices
-                camera.position.set(0, 0, 10); 
-                targetCameraZ = 10;
-            }, 500); // 500ms allows a full first person fly-through sequence
+                camera.position.set(0, 0, 8); 
+                targetCameraZ = 8;
+            }, 500);
             
         } else {
             console.log("wrong");
@@ -270,20 +249,8 @@ jQuery(function($){
         }
     }
 
-
-    // function checkOverlap(){
-    //     $(".checkpoint").each(function(){
-    //         // Check if an li has the player and friend
-    //         if (this.contains(player[0]) && this.contains(friend[0])){
-    //             console.log("overlap");
-    //             spawnPaths($(this));
-    //         }
-    //     })
-    // }
-
     function spawnPaths(activeTile){
         activeTile.removeAttr("id");
-
         $(rabbithole).empty();
 
         var freshRandomNum = Math.floor(Math.random() * 4) + 2;
@@ -293,6 +260,7 @@ jQuery(function($){
         }
 
         var newLis = $(rabbithole).find("> li");
+        newLis.eq(0).append(player);
         var randomIndex = Math.floor(Math.random() * newLis.length);
         newLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
 
@@ -301,7 +269,6 @@ jQuery(function($){
 
     function gameOver(){
         clearInterval(autoMoveTimer);
-
         alert("game over");
         $("#startBtn").show().text("Try Again?");
         location.reload();
@@ -312,6 +279,6 @@ jQuery(function($){
         camera.updateProjectionMatrix();
         renderer.setSize($(window).width(), $(window).height());
         draw3DCorridors();
-    })
+    });
 
 });
