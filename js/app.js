@@ -1,6 +1,7 @@
 jQuery(function($){
 
     const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000000, 0.08);
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("three-canvas"), antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -70,10 +71,10 @@ jQuery(function($){
             rightWall.rotation.y = -Math.PI / 2;
             corridorGroup.add(rightWall);
 
-            const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.8 });
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), backWallMat);
-            backWall.position.set(0, 0, -d/2);
-            corridorGroup.add(backWall);
+            // const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.8 });
+            // const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), backWallMat);
+            // backWall.position.set(0, 0, -d/2);
+            // corridorGroup.add(backWall);
 
             // Neon door trims on entrance and exit
             const entranceGeom = new THREE.BufferGeometry().setFromPoints([
@@ -129,9 +130,9 @@ jQuery(function($){
         // ceilingGrid.position.set(0, h / 2 - 0.01, -d / 2);
         // roomGroup.add(ceilingGrid);
 
-        const globalBackWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, h), outerWallMat);
-        globalBackWall.position.set(0, 0, -d);
-        roomGroup.add(globalBackWall);
+        // const globalBackWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, h), outerWallMat);
+        // globalBackWall.position.set(0, 0, -d);
+        // roomGroup.add(globalBackWall);
 
         if (selectionMarker) scene.remove(selectionMarker);
         const markerGeom = new THREE.RingGeometry(0.8, 1.2, 32);
@@ -159,7 +160,8 @@ jQuery(function($){
     $("#startBtn").on("click", function(e){
         e.stopPropagation();
         $(rabbithole).empty();
-        for (var i = 0; i <= randomNum; i++){
+        var hallwayCount = Math.floor(Math.random() * 4) + 2;
+        for (var i = 0; i < hallwayCount; i++){
             $(rabbithole).append("<li></li>");
         }
         var allLis = $(rabbithole).find("li");
@@ -253,9 +255,9 @@ jQuery(function($){
         activeTile.removeAttr("id");
         $(rabbithole).empty();
 
-        var freshRandomNum = Math.floor(Math.random() * 4) + 2;
+        var hallwayCount = Math.floor(Math.random() * 4) + 2;
 
-        for (var i = 0; i <= freshRandomNum; i++){
+        for (var i = 0; i < hallwayCount; i++){
             $(rabbithole).append("<li></li>");
         }
 
