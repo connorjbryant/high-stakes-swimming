@@ -10,7 +10,7 @@ jQuery(function($){
 
     // Camera pos
     const defaultCamY = 1.8;
-    const defaultCamZ = 12;
+    const defaultCamZ = 9;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
@@ -85,7 +85,7 @@ jQuery(function($){
             // corridorGroup.add(rightWall);
 
             const ropeColor = isCheckpoint ? 0xffd700 : 0x0088cc;
-            const ropeMat = new THREE.MeshStandardMaterial({ color: ropeColor, roughness: 0.3 });
+            const ropeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
 
             const ropeGeom = new THREE.CylinderGeometry(0.12, 0.12, d, 8);
 

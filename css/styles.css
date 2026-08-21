@@ -9,6 +9,10 @@ body, html {
     background-color: #84c7ff;
 }
 
+ul, li {
+    color: #84c7ff;
+}
+
 button {
     padding: 1rem;
     font-size: 1rem;
@@ -82,21 +86,21 @@ li {
     position: absolute;
     width: 1rem;
     height: 1rem;
-    background-color: black;
+    background-color: #84c7ff;
 }
 
 .player-worm {
     position: absolute;
     width: 1rem;
     height: 1rem;
-    background-color: black;
+    background-color: #84c7ff;
 }
 
 .player-friend {
     position: absolute;
     width: 1rem;
     height: 1rem;
-    background-color: black;
+    background-color: #84c7ff;
 }
 
 @media (orientation: portrait) and (hover: none) and (pointer: coarse){
