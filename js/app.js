@@ -7,6 +7,7 @@ jQuery(function($){
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("three-canvas"), antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // Camera pos
     const defaultCamY = 1;
@@ -24,6 +25,7 @@ jQuery(function($){
     let targetCameraZ = defaultCamZ;
     let targetCameraX = 0;
     let visualCorridors = [];
+    let lavaMeshes = [];
     let roomGroup = null; // Container to manage global room geometry cleanly
     let selectionMarker = null;
 
@@ -53,7 +55,7 @@ jQuery(function($){
         ctx.fillRect(0, 0, 256, 256);
 
         ctx.strokeStyle = "#c0c9d0";
-        ctx.linewidth = 4;
+        ctx.lineWidth = 4;
         ctx.strokeRect(0, 0, 256, 256);
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -75,7 +77,7 @@ jQuery(function($){
         lavaMeshes = [];
 
         const totalOptions = $(rabbithole).find("li");
-        const isMobile = $(window).width() < 768;
+        const isMobile = $(window).width() < 1024;
 
         const spacing = 5;
         const w = spacing;
@@ -471,8 +473,11 @@ jQuery(function($){
     }
 
     $(window).on("resize", function(){
-        camera.aspect = $(window).width() / $(window).height();
+        const isMobile = window.innerWidth < 1024;
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.fov = isMobile ? 65 : 50;
         camera.updateProjectionMatrix();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize($(window).width(), $(window).height());
         draw3DCorridors();
     });
