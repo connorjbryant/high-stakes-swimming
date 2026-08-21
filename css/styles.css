@@ -6,7 +6,12 @@ body, html {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: black;
+    background-color: #84c7ff;
+}
+
+button {
+    padding: 1rem;
+    font-size: 1rem;
 }
 
 #game {
@@ -20,8 +25,8 @@ body, html {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #0d1117;
-    color: white;
+    background-color: #84c7ff;
+    color: black;
     text-align: center;
     z-index: 9999;
     align-items: center;
@@ -45,8 +50,12 @@ body, html {
     width: 100%;
     text-align: center;
     z-index: 10;
-    color: white;
+    color: black;
     pointer-events: none;
+}
+
+#high-score-display {
+    color: black;
 }
 
 #startBtn {
@@ -62,7 +71,7 @@ body, html {
 }
 
 h1 {
-    color: red;
+    color: black;
 }
 
 li {
