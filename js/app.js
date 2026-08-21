@@ -1,23 +1,28 @@
 jQuery(function($){
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.08);
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const skyColor = 0x66ccff;
+    scene.background = new THREE.Color(skyColor);
+    scene.fog = new THREE.FogExp2(skyColor, 0.005);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("three-canvas"), antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Camera pos for hallways
-    camera.position.set(0, 0, 8);
-    camera.lookAt(0, 0, -5);
+    // Camera pos
+    const defaultCamY = 1.8;
+    const defaultCamZ = 12;
+    camera.position.set(0, defaultCamY, defaultCamZ);
+    camera.lookAt(0, -0.2, -20);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0xffffff, 0.8, 60);
-    pointLight.position.set(0, 2, 2);
-    scene.add(pointLight);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(10, 20, 10);
+    scene.add(sunLight);
 
-    let targetCameraZ = 8;
+    let targetCameraZ = defaultCamZ;
+    let targetCameraX = 0;
     let visualCorridors = [];
     let roomGroup = null; // Container to manage global room geometry cleanly
     let selectionMarker = null;
@@ -27,7 +32,13 @@ jQuery(function($){
 
     function animate(){
         requestAnimationFrame(animate);
-        camera.position.z += (targetCameraZ - camera.position.z) * 0.1;
+        camera.position.z += (targetCameraZ - camera.position.z) * 0.08;
+        camera.position.x += (targetCameraX - camera.position.x) * 0.08;
+
+        if (camera.position.z > 0 && camera.rotation.x !== 0){
+            camera.rotation.x += (0 - camera.rotation.x) * 0.1;
+        }
+
         renderer.render(scene, camera);
     }
     animate();
@@ -42,13 +53,12 @@ jQuery(function($){
 
         const totalOptions = $(rabbithole).find("li");
         const isMobile = $(window).width() < 768;
-        targetCameraZ = 8;
 
         const spacing = 5;
         const w = spacing;
         const h = 4;
-        const d = 15;
-        const roomWidth = totalOptions.length * spacing;
+        const d = 40;
+        const roomWidth = Math.max(totalOptions.length * spacing, 40);
 
         totalOptions.each(function(index){
             const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
@@ -56,71 +66,103 @@ jQuery(function($){
             const corridorGroup = new THREE.Group();
 
             const isCheckpoint = ($(this).attr("id") === "checkpoint");
-            const wallColor = isCheckpoint ? 0x113322 : 0x1a2536; 
-            const trimColor = isCheckpoint ? 0x00ffcc : 0xff00ff;
+            const wallColor = isCheckpoint ? 0x00ffcc : 0x005588; 
+            const trimColor = isCheckpoint ? 0xffd700 : 0x0088cc;
 
             const corridorWallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.6, side: THREE.DoubleSide });
             const trimMat = new THREE.LineBasicMaterial({ color: trimColor, linewidth: 2 });
 
             // Left Wall
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
-            leftWall.position.set(-w/2, 0, 0);
-            leftWall.rotation.y = Math.PI / 2;
-            corridorGroup.add(leftWall);
+            // const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
+            // leftWall.position.set(-w/2, 0, 0);
+            // leftWall.rotation.y = Math.PI / 2;
+            // corridorGroup.add(leftWall);
 
-            // Right Wall
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
-            rightWall.position.set(w/2, 0, 0);
-            rightWall.rotation.y = -Math.PI / 2;
-            corridorGroup.add(rightWall);
+            // // Right Wall
+            // const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
+            // rightWall.position.set(w/2, 0, 0);
+            // rightWall.rotation.y = -Math.PI / 2;
+            // corridorGroup.add(rightWall);
+
+            const ropeColor = isCheckpoint ? 0xffd700 : 0x0088cc;
+            const ropeMat = new THREE.MeshStandardMaterial({ color: ropeColor, roughness: 0.3 });
+
+            const ropeGeom = new THREE.CylinderGeometry(0.12, 0.12, d, 8);
+
+            const leftRope = new THREE.Mesh(ropeGeom, ropeMat);
+            leftRope.position.set(-spacing / 2, 0, -d / 2);
+            leftRope.rotation.x = Math.PI / 2;
+            corridorGroup.add(leftRope);
+
+            const rightRope = new THREE.Mesh(ropeGeom, ropeMat);
+            rightRope.position.set(spacing / 2, 0, -d / 2);
+            rightRope.rotation.x = Math.PI / 2;
+            corridorGroup.add(rightRope);
 
             // const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.8 });
             // const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), backWallMat);
             // backWall.position.set(0, 0, -d/2);
             // corridorGroup.add(backWall);
 
-            // Neon door trims on entrance and exit
-            const entranceGeom = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-w/2, -h/2, d/2), new THREE.Vector3(-w/2, h/2, d/2),
-                new THREE.Vector3(w/2, h/2, d/2), new THREE.Vector3(w/2, -h/2, d/2),
-                new THREE.Vector3(-w/2, -h/2, d/2)
-            ]);
-            const exitGeom = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-w/2, -h/2, -d/2), new THREE.Vector3(-w/2, h/2, -d/2),
-                new THREE.Vector3(w/2, h/2, -d/2), new THREE.Vector3(w/2, -h/2, -d/2),
-                new THREE.Vector3(-w/2, -h/2, -d/2)
-            ]);
-            corridorGroup.add(new THREE.Line(entranceGeom, trimMat));
-            corridorGroup.add(new THREE.Line(exitGeom, trimMat));
+            // Swimming T markers
+            const centerLineGeom = new THREE.PlaneGeometry(0.2, d - 4);
+            const tMat = new THREE.MeshBasicMaterial({ color: 0x001122, side: THREE.DoubleSide });
+            const centerLine = new THREE.Mesh(centerLineGeom, tMat);
+            centerLine.rotation.x = -Math.PI / 2;
+            centerLine.position.set(0, -h / 2 + 0.02, 1);
+            corridorGroup.add(centerLine);
 
-            corridorGroup.position.set(layoutOffset, 0, -d/2);
+            const crossbarGeom = new THREE.PlaneGeometry(1.2, 0.2);
+            const crossbar = new THREE.Mesh(crossbarGeom, tMat);
+            crossbar.rotation.x = -Math.PI / 2;
+            crossbar.position.set(0, -h / 2 + 0.02, -d / 2 + 1.5);
+            corridorGroup.add(crossbar);
+
+            // Waterslide at lane end
+            const slideGeom = new THREE.CylinderGeometry(1.8, 1.8, 20, 16, 1, true, 0, Math.PI * 2);
+
+            const slideColor = isCheckpoint ? 0xffaa00 : 0x00aaff;
+            const slideMat = new THREE.MeshStandardMaterial({
+                color: slideColor,
+                roughness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            const slide = new THREE.Mesh(slideGeom, slideMat);
+
+            //slide.rotation.z = Math.PI;
+            slide.rotation.x = Math.PI / 2.3;
+            slide.position.set(0, -0.8, -d - 2);
+            corridorGroup.add(slide);
+
+            corridorGroup.position.set(layoutOffset, 0, 0);
 
             scene.add(corridorGroup);
             visualCorridors.push(corridorGroup);
         });
 
         // Shared Room Structure
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x181820, roughness: 0.4, side: THREE.DoubleSide });
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.5, side: THREE.DoubleSide });
-        const outerWallMat = new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.7, side: THREE.DoubleSide });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a4b6e, roughness: 0.2 });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45 });
+        const outerWallMat = new THREE.MeshStandardMaterial({ color: 0x0a2d4a, roughness: 0.7, side: THREE.DoubleSide });
 
-        const globalFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, d + 10), floorMat);
-        globalFloor.position.set(0, -h / 2, -d / 2 + 5);
+        const globalFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth + 20, d + 20), floorMat);
+        globalFloor.position.set(0, -h / 2, -d / 2 + 1);
         globalFloor.rotation.x = -Math.PI / 2;
         roomGroup.add(globalFloor);
 
-        const globalCeiling = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, d + 10), roofMat);
-        globalCeiling.position.set(0, h / 2, -d / 2 + 5);
-        globalCeiling.rotation.x = Math.PI / 2;
-        roomGroup.add(globalCeiling);
+        const waterSurface = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth + 20, d + 20), waterMat);
+        waterSurface.position.set(0, -0.1, -d / 2 + 1);
+        waterSurface.rotation.x = -Math.PI / 2;
+        roomGroup.add(waterSurface);
 
-        const farLeftWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 10, h), outerWallMat);
-        farLeftWall.position.set(-roomWidth / 2, 0, -d / 2 + 5);
+        const farLeftWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 40, h * 2), outerWallMat);
+        farLeftWall.position.set(-roomWidth / 2 - 2, 0, -d / 2);
         farLeftWall.rotation.y = Math.PI / 2;
         roomGroup.add(farLeftWall);
 
-        const farRightWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 10, h), outerWallMat);
-        farRightWall.position.set(roomWidth / 2, 0, -d / 2 + 5);
+        const farRightWall = new THREE.Mesh(new THREE.PlaneGeometry(d + 40, h * 2), outerWallMat);
+        farRightWall.position.set(roomWidth / 2 + 2, 0, -d / 2);
         farRightWall.rotation.y = -Math.PI / 2;
         roomGroup.add(farRightWall);
 
@@ -146,7 +188,7 @@ jQuery(function($){
         const initialTiles = $(rabbithole).find("li");
         const pIndex = initialTiles.index(player.parent());
         const startX = pIndex > -1 ? (pIndex - (initialTiles.length - 1) / 2) * spacing : 0;
-        selectionMarker.position.set(startX, -h / 2 + 0.08, 2.5);
+        selectionMarker.position.set(startX, 0.1, 2.5);
         scene.add(selectionMarker);
 
         scene.add(roomGroup);
@@ -158,7 +200,7 @@ jQuery(function($){
 
     var autoMoveTimer = null;
     var moveDirection = 1;
-    var randomNum = Math.floor(Math.random() * 4) + 2;
+    //var randomNum = Math.floor(Math.random() * 4) + 2;
 
     // LocalStorage High Score Setup
     var highScore = localStorage.getItem("worming_high_score") || 0;
@@ -188,6 +230,12 @@ jQuery(function($){
         allLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
 
         $(this).hide();
+
+        // Reset cam position
+        targetCameraX = 0;
+        targetCameraZ = defaultCamZ;
+        camera.position.set(0, defaultCamY, defaultCamZ);
+
         draw3DCorridors();
         startAutoMovement();
     });
@@ -258,14 +306,30 @@ jQuery(function($){
             const spacing = 5;
             const offsetPosition = (winIndex - (allTiles.length - 1) / 2) * spacing;
 
-            camera.position.x = offsetPosition;
-            targetCameraZ = -14;
-            
+            targetCameraX = offsetPosition;
+            targetCameraZ = -38;
+
+            setTimeout(function(){
+                camera.rotation.x = -Math.PI / 6;
+                camera.position.y = -2.5;
+                targetCameraZ = -52;
+            }, 450);
+
             setTimeout(function(){
                 spawnPaths(activeTile);
-                camera.position.set(0, 0, 8); 
-                targetCameraZ = 8;
-            }, 500);
+                camera.position.set(0, defaultCamY, defaultCamZ);
+                camera.rotation.set(0, 0, 0);
+                targetCameraX = 0;
+                targetCameraZ = defaultCamZ;
+            }, 1200);
+            
+            // setTimeout(function(){
+            //     spawnPaths(activeTile);
+            //     camera.position.x = 0;
+            //     camera.position.z = defaultCamZ;
+            //     targetCameraX = 0;
+            //     targetCameraZ = defaultCamZ;
+            // }, 600);
             
         } else {
             console.log("wrong");
