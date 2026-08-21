@@ -9,8 +9,8 @@ jQuery(function($){
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // Camera pos
-    const defaultCamY = 1.8;
-    const defaultCamZ = 9;
+    const defaultCamY = 1;
+    const defaultCamZ = 8;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
@@ -278,7 +278,7 @@ jQuery(function($){
         $("#msg").text(score);
 
         $(rabbithole).empty();
-        var hallwayCount = Math.floor(Math.random() * 3) + 2;
+        var hallwayCount = Math.floor(Math.random() * 2) + 2;
         for (var i = 0; i < hallwayCount; i++){
             $(rabbithole).append("<li></li>");
         }
@@ -433,7 +433,7 @@ jQuery(function($){
         activeTile.removeAttr("id");
         $(rabbithole).empty();
 
-        var hallwayCount = Math.floor(Math.random() * 3) + 2;
+        var hallwayCount = Math.floor(Math.random() * 2) + 2;
 
         for (var i = 0; i < hallwayCount; i++){
             $(rabbithole).append("<li></li>");
