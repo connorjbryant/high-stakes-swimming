@@ -10,8 +10,9 @@ jQuery(function($){
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // Camera pos
+    const isMobile = window.innerWidth < 1024;
     const defaultCamY = 1;
-    const defaultCamZ = 8;
+    const defaultCamZ = isMobile ? 5.5 : 8;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
