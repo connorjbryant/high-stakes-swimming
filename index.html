@@ -15,8 +15,17 @@
     <canvas id="three-canvas"></canvas>
 
     <div id="ui">
-        <button id="startBtn">Start</button>
-        <p id="msg">Click anywhere to try and advance!</p>
+        <!-- Game HUD: Hidden until the game starts -->
+         <div id="hud" style="display: none;">
+            <p>SCORE: <span id="msg">0</span></p>
+         </div>
+
+        <!-- Start overlay -->
+        <div id="start-screen">
+            <h1>Game</h1>
+            <p id="high-score-display">High Score: 0</p>
+            <button id="startBtn">Start</button>
+        </div>
     </div>
 
     <div id="game-blueprint">

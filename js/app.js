@@ -22,6 +22,9 @@ jQuery(function($){
     let roomGroup = null; // Container to manage global room geometry cleanly
     let selectionMarker = null;
 
+    var score = 0;
+    var gameActive = false;
+
     function animate(){
         requestAnimationFrame(animate);
         camera.position.z += (targetCameraZ - camera.position.z) * 0.1;
@@ -44,7 +47,7 @@ jQuery(function($){
         const spacing = 5;
         const w = spacing;
         const h = 4;
-        const d= 15;
+        const d = 15;
         const roomWidth = totalOptions.length * spacing;
 
         totalOptions.each(function(index){
@@ -142,7 +145,7 @@ jQuery(function($){
 
         const initialTiles = $(rabbithole).find("li");
         const pIndex = initialTiles.index(player.parent());
-        const startX = pIndex > -1 ? (pIndex - (initialTiles - 1) / 2) * spacing : 0;
+        const startX = pIndex > -1 ? (pIndex - (initialTiles.length - 1) / 2) * spacing : 0;
         selectionMarker.position.set(startX, -h / 2 + 0.08, 2.5);
         scene.add(selectionMarker);
 
@@ -157,8 +160,23 @@ jQuery(function($){
     var moveDirection = 1;
     var randomNum = Math.floor(Math.random() * 4) + 2;
 
+    // LocalStorage High Score Setup
+    var highScore = localStorage.getItem("worming_high_score") || 0;
+    $("#high-score-display").text("HIGH SCORE: " + highScore);
     $("#startBtn").on("click", function(e){
         e.stopPropagation();
+        e.preventDefault();
+
+        gameActive = true;
+
+        // Hide start screen overlay and show active HUD
+        $("#start-screen").hide();
+        $("#hud").show();
+
+        // Reset score
+        score = 0;
+        $("#msg").text(score);
+
         $(rabbithole).empty();
         var hallwayCount = Math.floor(Math.random() * 4) + 2;
         for (var i = 0; i < hallwayCount; i++){
@@ -181,7 +199,7 @@ jQuery(function($){
         var initialIndex = initialTiles.index(player.parent());
         if (selectionMarker && initialIndex !== -1){
             const spacing = 5;
-            selectionMarker.position.x = (initialIndex - (initialTiles.length - 1) /2) * spacing;
+            selectionMarker.position.x = (initialIndex - (initialTiles.length - 1) / 2) * spacing;
         }
 
         autoMoveTimer = setInterval(function(){
@@ -212,14 +230,16 @@ jQuery(function($){
     }
 
     $(document).on("keydown", function(e){
-        if (e.key === "Enter"){
+        if (e.key === "Enter" && gameActive){
             e.preventDefault();
             attemptAdvance();
         }
     });
 
     $("#three-canvas").on("click", function(event){
-        attemptAdvance();
+        if (gameActive){
+            attemptAdvance();
+        }
     });
 
     function attemptAdvance(){
@@ -228,6 +248,8 @@ jQuery(function($){
         
         if (playerTile.length && friendTile.length && playerTile.is(friendTile)){
             console.log("correct");
+            score++;
+            $("#msg").text(score);
             var activeTile = $("#checkpoint");
             
             var allTiles = $(rabbithole).find("> li");
@@ -261,7 +283,7 @@ jQuery(function($){
             $(rabbithole).append("<li></li>");
         }
 
-        var newLis = $(rabbithole).find("> li");
+        var newLis = $(rabbithole).find("li");
         newLis.eq(0).append(player);
         var randomIndex = Math.floor(Math.random() * newLis.length);
         newLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
@@ -270,10 +292,23 @@ jQuery(function($){
     }
 
     function gameOver(){
+        gameActive = false;
         clearInterval(autoMoveTimer);
-        alert("game over");
+
+        // Check and save high score
+        if (score > highScore){
+            highScore = score;
+            localStorage.setItem("worming_high_score", highScore);
+            alert("NEW HIGH SCORE: " + score + "!");
+        } else {
+            alert("GAME OVER! Score: " + score);
+        }
+        
+        // Reset Ui to start screen
+        $("#high-score-display").text("HIGH SCORE: " + highScore);
+        $("#hud").hide();
+        $("#start-screen").show();
         $("#startBtn").show().text("Try Again?");
-        location.reload();
     }
 
     $(window).on("resize", function(){
