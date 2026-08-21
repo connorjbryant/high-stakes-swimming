@@ -12,7 +12,7 @@ jQuery(function($){
     // Camera pos
     const isMobile = window.innerWidth < 1024;
     const defaultCamY = 1;
-    const defaultCamZ = isMobile ? 5.5 : 8;
+    const defaultCamZ = isMobile ? 4.75 : 5;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
@@ -241,17 +241,22 @@ jQuery(function($){
         // roomGroup.add(globalBackWall);
 
         if (selectionMarker) scene.remove(selectionMarker);
-        const markerGeom = new THREE.RingGeometry(0.8, 1.2, 32);
-        const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide });
+
+        const markerGeom = new THREE.ConeGeometry(0.8, 1.8, 4);
+        const markerMat = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0x999900,
+            roughness: 0.3
+        });
         selectionMarker = new THREE.Mesh(markerGeom, markerMat);
-        selectionMarker.rotation.x = Math.PI / 2;
+        selectionMarker.rotation.x = Math.PI;
 
         const initialTiles = $(rabbithole).find("li");
         const pIndex = initialTiles.index(player.parent());
-        const startX = pIndex > -1 ? (pIndex - (initialTiles.length - 1) / 2) * spacing : 0;
-        selectionMarker.position.set(startX, 0.1, 2.5);
-        scene.add(selectionMarker);
+        const startX = pIndex > -1 ? (pIndex - (initialTiles.length - 1) / 2) * spacing: 0;
 
+        selectionMarker.position.set(startX, 4.5, -d - 2);
+        scene.add(selectionMarker);
         scene.add(roomGroup);
     }
 
@@ -311,7 +316,8 @@ jQuery(function($){
         var initialIndex = initialTiles.index(player.parent());
         if (selectionMarker && initialIndex !== -1){
             const spacing = 5;
-            selectionMarker.position.x = (initialIndex - (initialTiles.length - 1) / 2) * spacing;
+            const activeX = (initialIndex - (initialTiles.length - 1) / 2) * spacing;
+            selectionMarker.position.set(activeX, 4.5, -42);
         }
 
         autoMoveTimer = setInterval(function(){
@@ -331,12 +337,14 @@ jQuery(function($){
             var targetTile = allTiles.eq(targetIndex);
             player.appendTo(targetTile);
 
+            const spacing = 5;
+            const activeX = (targetIndex - (allTiles.length - 1) / 2) * spacing;
+            targetCameraX = activeX;
+
             visualCorridors.forEach(box => box.scale.set(1, 1, 1));
 
             if (selectionMarker) {
-                const spacing = 5;
-                const activeX = (targetIndex - (allTiles.length - 1) / 2) * spacing;
-                selectionMarker.position.x = activeX;
+                selectionMarker.position.set(activeX, 4.5, -42);
             }
         }, 400);
     }
@@ -355,6 +363,8 @@ jQuery(function($){
     });
 
     function attemptAdvance(){
+        clearInterval(autoMoveTimer);
+        if (selectionMarker) selectionMarker.visible = false;
         var playerTile = player.parent();
         var friendTile = friend.parent();
 
@@ -363,6 +373,7 @@ jQuery(function($){
         
         const spacing = 5;
         const offsetPosition = (playerIndex - (allTiles.length - 1) / 2) * spacing;
+        targetCameraX = offsetPosition;
         
         if (playerTile.length && friendTile.length && playerTile.is(friendTile)){
             console.log("correct");
@@ -393,6 +404,7 @@ jQuery(function($){
                 camera.rotation.set(0, 0, 0);
                 targetCameraX = 0;
                 targetCameraZ = defaultCamZ;
+                startAutoMovement();
             }, 1200);
             
             // setTimeout(function(){
@@ -476,7 +488,7 @@ jQuery(function($){
     $(window).on("resize", function(){
         const isMobile = window.innerWidth < 1024;
         camera.aspect = window.innerWidth / window.innerHeight;
-        camera.fov = isMobile ? 65 : 50;
+        camera.fov = isMobile ? 65 : 65;
         camera.updateProjectionMatrix();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize($(window).width(), $(window).height());
