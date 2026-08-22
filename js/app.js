@@ -471,26 +471,26 @@ jQuery(function($){
             targetCameraX = offsetPosition;
             targetCameraZ = -38;
 
-            lavaMeshes.forEach(mesh => mesh.visible = true);
+            //lavaMeshes.forEach(mesh => mesh.visible = true);
 
             scene.fog.color.setHex(0xff0000);
-            scene.fog.density = 0.03;
+            scene.fog.density = 0.04;
+            
             setTimeout(function(){
-                camera.rotation.x = -Math.PI / 2;
-                camera.position.y = -11.9;
-                targetCameraZ = -48;
+                camera.position.x += (Math.random() - 0.5) * 1.5;
+                camera.position.y += (Math.random() - 0.5) * 1.5;
             }, 350);
 
             setTimeout(function(){
                 scene.fog.color.setHex(skyColor);
                 scene.fog.density = 0.005;
+
                 camera.position.set(0, defaultCamY, defaultCamZ);
                 camera.rotation.set(0, 0, 0);
                 targetCameraX = 0;
                 targetCameraZ = defaultCamZ;
-                console.log("wrong");
                 gameOver();
-            }, 1400);
+            }, 1200);
         }
     }
 
