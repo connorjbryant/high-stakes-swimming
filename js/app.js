@@ -12,7 +12,7 @@ jQuery(function($){
     // Camera pos
     const isMobile = window.innerWidth < 1024;
     const defaultCamY = 1.55;
-    const defaultCamZ = isMobile ? 4.75 : 5;
+    const defaultCamZ = isMobile ? 2.8 : 5;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
@@ -533,8 +533,9 @@ jQuery(function($){
 
     $(window).on("resize", function(){
         const isMobile = window.innerWidth < 1024;
+        const currentCamZ = isMobile ? 2.8 : 5;
         camera.aspect = window.innerWidth / window.innerHeight;
-        camera.fov = isMobile ? 65 : 65;
+        camera.fov = isMobile ? 75 : 65;
         camera.updateProjectionMatrix();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize($(window).width(), $(window).height());
