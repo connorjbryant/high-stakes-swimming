@@ -4,7 +4,7 @@ jQuery(function($){
     const skyColor = 0x66ccff;
     scene.background = new THREE.Color(skyColor);
     scene.fog = new THREE.FogExp2(skyColor, 0.005);
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("three-canvas"), antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -12,7 +12,7 @@ jQuery(function($){
     // Camera pos
     const isMobile = window.innerWidth < 1024;
     const defaultCamY = 1.55;
-    const defaultCamZ = isMobile ? 2.8 : 5;
+    const defaultCamZ = isMobile ? -5 : -2;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
 
@@ -535,7 +535,7 @@ jQuery(function($){
         const isMobile = window.innerWidth < 1024;
         const currentCamZ = isMobile ? 2.8 : 5;
         camera.aspect = window.innerWidth / window.innerHeight;
-        camera.fov = isMobile ? 75 : 65;
+        camera.fov = isMobile ? 55 : 45;
         camera.updateProjectionMatrix();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize($(window).width(), $(window).height());
