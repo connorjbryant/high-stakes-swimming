@@ -11,7 +11,7 @@ jQuery(function($){
 
     // Camera pos
     const isMobile = window.innerWidth < 1024;
-    const defaultCamY = 1;
+    const defaultCamY = 1.55;
     const defaultCamZ = isMobile ? 4.75 : 5;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
@@ -32,6 +32,16 @@ jQuery(function($){
 
     var score = 0;
     var gameActive = false;
+    let currentArrowColor = 0xffff00;
+
+    const colorPalette = [
+        { hex: 0xff3333, emissive: 0x550000 }, //Red
+        { hex: 0x33ff33, emissive: 0x005500 }, //Green
+        { hex: 0x3388ff, emissive: 0x002255 }, //Blue
+        { hex: 0xffff33, emissive: 0x555500 }, //Yellow
+        { hex: 0xff33ff, emissive: 0x550055 }, //Magenta
+        { hex: 0x33ffff, emissive: 0x005555 } //Cyan
+    ];
 
     function animate(){
         requestAnimationFrame(animate);
@@ -78,18 +88,32 @@ jQuery(function($){
         lavaMeshes = [];
 
         const totalOptions = $(rabbithole).find("li");
-        const isMobile = $(window).width() < 1024;
 
         const spacing = 5;
-        const w = spacing;
         const h = 4;
-        const d = 40;
-        const roomWidth = Math.max(totalOptions.length * spacing, 40);
+        const d = 30;
+        const roomWidth = Math.max(totalOptions.length * spacing, 30);
+
+        const shuffledPalette = [...colorPalette].sort(() => Math.random() - 0.5);
+        const winningIndex = Math.floor(Math.random() * totalOptions.length);
+
+        let laneColors = [];
+
+        totalOptions.each(function(index){
+            const colorObj = shuffledPalette[index % shuffledPalette.length];
+            laneColors.push(colorObj);
+            $(this).data("slideColor", colorObj.hex);
+
+            if (index === winningIndex){
+                currentArrowColor = colorObj.hex;
+            }
+        });
 
         totalOptions.each(function(index){
             const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
 
             const corridorGroup = new THREE.Group();
+            const colorObj = laneColors[index];
 
             const isCheckpoint = ($(this).attr("id") === "checkpoint");
             const wallColor = isCheckpoint ? 0x00ffcc : 0x005588; 
@@ -116,12 +140,12 @@ jQuery(function($){
             const ropeGeom = new THREE.CylinderGeometry(0.12, 0.12, d, 8);
 
             const leftRope = new THREE.Mesh(ropeGeom, ropeMat);
-            leftRope.position.set(-spacing / 2, 0, -d / 2);
+            leftRope.position.set(-spacing / 2, -h / 2 + 1.2, -d / 2);
             leftRope.rotation.x = Math.PI / 2;
             corridorGroup.add(leftRope);
 
             const rightRope = new THREE.Mesh(ropeGeom, ropeMat);
-            rightRope.position.set(spacing / 2, 0, -d / 2);
+            rightRope.position.set(spacing / 2, -h / 2 + 1.2, -d / 2);
             rightRope.rotation.x = Math.PI / 2;
             corridorGroup.add(rightRope);
 
@@ -152,8 +176,8 @@ jQuery(function($){
             const emissiveColor = isCheckpoint ? 0x004433 : 0x991100;
 
             const slideMat = new THREE.MeshStandardMaterial({
-                color: slideColor,
-                emissive: emissiveColor,
+                color: colorObj.hex,
+                emissive: colorObj.emissive,
                 emissiveIntensity: 0.6,
                 roughness: 0.2,
                 side: THREE.DoubleSide
@@ -174,7 +198,7 @@ jQuery(function($){
                 });
                 const lavaPit = new THREE.Mesh(lavaGeom, lavaMat);
                 lavaPit.rotation.x = -Math.PI / 2;
-                lavaPit.position.set(0, -12, -d - 50);
+                lavaPit.position.set(0, -11.4, -d - 40);
                 lavaPit.visible = false;
                 corridorGroup.add(lavaPit);
                 lavaMeshes.push(lavaPit);
@@ -193,15 +217,36 @@ jQuery(function($){
 
         const totalWorldDepth = 300;
         const groundDepth = d + 20;
-        const globalFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth + 40, groundDepth), floorMat);
-        globalFloor.position.set(0, -h / 2, -groundDepth / 2 + 20);
-        globalFloor.rotation.x = -Math.PI / 2;
-        roomGroup.add(globalFloor);
 
-        const waterSurface = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth + 40, groundDepth), waterMat);
-        waterSurface.position.set(0, -0.1, -groundDepth / 2 + 20);
-        waterSurface.rotation.x = -Math.PI / 2;
-        roomGroup.add(waterSurface);
+        const upperDepth = d;
+        const upperFloorMat = new THREE.MeshStandardMaterial({ color: 0x0a4b6e, roughness: 0.2 });
+        const upperWaterMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45 });
+
+        const upperWater = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, upperDepth), upperWaterMat);
+        upperWater.position.set(0, -h / 2 + 1.2, -upperDepth / 2);
+        upperWater.rotation.x = -Math.PI / 2;
+        roomGroup.add(upperWater);
+
+        const upperFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, upperDepth), upperFloorMat);
+        upperFloor.position.set(0, -h / 2, -upperDepth / 2);
+        upperFloor.rotation.x = -Math.PI / 2;
+        roomGroup.add(upperFloor);
+
+        const poolY = -12;
+        const basinDepth = 150;
+        const basinWidth = roomWidth + 80;
+
+        const lowerFloor = new THREE.Mesh(new THREE.PlaneGeometry(basinWidth, basinDepth), upperFloorMat);
+
+        lowerFloor.position.set(0, poolY, -d - (basinDepth / 2));
+
+        lowerFloor.rotation.x = -Math.PI / 2;
+        roomGroup.add(lowerFloor);
+
+        const lowerWater = new THREE.Mesh(new THREE.PlaneGeometry(basinWidth, basinDepth), upperWaterMat);
+        lowerWater.position.set(0, poolY + 6.0, -d - (basinDepth / 2));
+        lowerWater.rotation.x = -Math.PI / 2;
+        roomGroup.add(lowerWater);
 
         const tiledWallTexture = tileTexture.clone();
         tiledWallTexture.needsUpdate = true;
@@ -214,16 +259,20 @@ jQuery(function($){
             side: THREE.DoubleSide
         });
 
+        const ledgeWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, Math.abs(poolY - (-h / 2))), tileWallMat);
+        ledgeWall.position.set(0, (poolY + (-h / 2)) / 2, -d);
+        roomGroup.add(ledgeWall);
+
         const wallDepth = 300;
-        const wallHeight = h * 6;
+        const wallHeight = h * 10;
 
         const farLeftWall = new THREE.Mesh(new THREE.PlaneGeometry(wallDepth, wallHeight), tileWallMat);
-        farLeftWall.position.set(-roomWidth / 2 - 2, 0, -wallDepth / 2 + 20);
+        farLeftWall.position.set(-roomWidth / 2 - 2, poolY / 2, -wallDepth / 2 + 20);
         farLeftWall.rotation.y = Math.PI / 2;
         roomGroup.add(farLeftWall);
 
         const farRightWall = new THREE.Mesh(new THREE.PlaneGeometry(wallDepth, wallHeight), tileWallMat);
-        farRightWall.position.set(roomWidth / 2 + 2, 0, -wallDepth / 2 + 20);
+        farRightWall.position.set(roomWidth / 2 + 2, poolY / 2, -wallDepth / 2 + 20);
         farRightWall.rotation.y = -Math.PI / 2;
         roomGroup.add(farRightWall);
 
@@ -244,8 +293,9 @@ jQuery(function($){
 
         const markerGeom = new THREE.ConeGeometry(0.8, 1.8, 4);
         const markerMat = new THREE.MeshStandardMaterial({
-            color: 0xffff00,
-            emissive: 0x999900,
+            color: currentArrowColor,
+            emissive: currentArrowColor,
+            emissiveIntensity: 0.5,
             roughness: 0.3
         });
         selectionMarker = new THREE.Mesh(markerGeom, markerMat);
@@ -304,7 +354,6 @@ jQuery(function($){
         targetCameraX = 0;
         targetCameraZ = defaultCamZ;
         camera.position.set(0, defaultCamY, defaultCamZ);
-
         draw3DCorridors();
         startAutoMovement();
     });
@@ -366,7 +415,7 @@ jQuery(function($){
         clearInterval(autoMoveTimer);
         if (selectionMarker) selectionMarker.visible = false;
         var playerTile = player.parent();
-        var friendTile = friend.parent();
+        //var friendTile = friend.parent();
 
         var allTiles = $(rabbithole).find("li");
         var playerIndex = allTiles.index(playerTile);
@@ -375,7 +424,8 @@ jQuery(function($){
         const offsetPosition = (playerIndex - (allTiles.length - 1) / 2) * spacing;
         targetCameraX = offsetPosition;
         
-        if (playerTile.length && friendTile.length && playerTile.is(friendTile)){
+        var playerSlideColor = playerTile.data("slideColor");
+        if (playerTile.length && playerSlideColor === currentArrowColor){
             console.log("correct");
             score++;
             $("#msg").text(score);
@@ -386,11 +436,11 @@ jQuery(function($){
             targetCameraX = offsetPosition;
             targetCameraZ = -38;
 
-            // setTimeout(function(){
-            //     camera.rotation.x = -Math.PI / 5.3;
-            //     camera.position.y = 0;
-            //     targetCameraZ = -40;
-            // }, 450);
+            setTimeout(function(){
+                camera.rotation.x = -Math.PI / 4;
+                camera.position.y = -8;
+                targetCameraZ = -45;
+            }, 450);
 
             setTimeout(function(){
                 camera.rotation.x = -Math.PI / 6;
@@ -399,7 +449,7 @@ jQuery(function($){
             }, 450);
 
             setTimeout(function(){
-                spawnPaths(activeTile);
+                spawnPaths();
                 camera.position.set(0, defaultCamY, defaultCamZ);
                 camera.rotation.set(0, 0, 0);
                 targetCameraX = 0;
@@ -444,8 +494,8 @@ jQuery(function($){
         }
     }
 
-    function spawnPaths(activeTile){
-        activeTile.removeAttr("id");
+    function spawnPaths(){
+        //activeTile.removeAttr("id");
         $(rabbithole).empty();
 
         var hallwayCount = Math.floor(Math.random() * 2) + 2;
@@ -456,11 +506,7 @@ jQuery(function($){
 
         var newLis = $(rabbithole).find("li");
         newLis.eq(0).append(player);
-        var randomIndex = Math.floor(Math.random() * newLis.length);
-        //newLis.eq(randomIndex).append(friend).attr("id", "checkpoint");
-        const targetLi = newLis.eq(randomIndex);
-        targetLi.attr("id", "checkpoint");
-        targetLi.append(friend);
+        newLis.eq(0).append(friend);
 
         draw3DCorridors();
     }
@@ -475,7 +521,7 @@ jQuery(function($){
             localStorage.setItem("worming_high_score", highScore);
             alert("NEW HIGH SCORE: " + score + "!");
         } else {
-            alert("GAME OVER! You fell in lava. Score: " + score);
+            alert("GAME OVER! You chose the wrong slide. Score: " + score);
         }
         
         // Reset Ui to start screen
