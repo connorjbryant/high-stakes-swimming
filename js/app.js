@@ -759,17 +759,58 @@ jQuery(function($){
         if (score > highScore){
             highScore = score;
             localStorage.setItem("worming_high_score", highScore);
-            alert("NEW HIGH SCORE: " + score + "!");
-        } else {
-            alert("GAME OVER! You chose the wrong slide. Score: " + score);
         }
         
         // Reset Ui to start screen
+        $("#final-score").text(score);
+        $("#final-high-score").text(highScore);
         $("#high-score-display").text("HIGH SCORE: " + highScore);
         $("#hud").hide();
-        $("#start-screen").show();
-        $("#startBtn").show().text("Try Again?");
+        $("#start-screen").hide();
+        $("#game-over-screen").show();
     }
+
+    $("#restartBtn").on("click", function(e){
+        e.stopPropagation();
+        e.preventDefault();
+
+        $("#game-over-screen").hide();
+
+        gameActive = true;
+
+        score = 0;
+        $("#msg").text(score);
+        $("#hud").show();
+
+        scene.fog.color.setHex(skyColor);
+        scene.fog.density = 0.005;
+
+        camera.position.set(0, defaultCamY, defaultCamZ);
+        camera.rotation.set(0, 0, 0);
+
+        targetCameraX = 0;
+        targetCameraZ = defaultCamZ;
+
+        $(rabbithole).empty();
+
+        var hallwayCount = Math.floor(Math.random() * 2) + 2;
+
+        for (var i = 0; i < hallwayCount; i++){
+            $(rabbithole).append("<li></li>");
+        }
+
+        var allLis = $(rabbithole).find("li");
+
+        allLis.eq(0).append(player);
+        var randomIndex = Math.floor(Math.random() * allLis.length);
+        const targetLi = allLis.eq(randomIndex);
+
+        allLis.attr("id", "checkpoint");
+        targetLi.append(friend);
+
+        draw3DCorridors();
+        startAutoMovement();
+    })
 
     $(window).on("resize", function(){
         const isMobile = window.innerWidth < 1024;
