@@ -28,6 +28,7 @@ jQuery(function($){
     let visualCorridors = [];
     let lavaMeshes = [];
     let bombGroups = [];
+    let activeSparks = [];
     let roomGroup = null; // Container to manage global room geometry cleanly
     let selectionMarker = null;
 
@@ -44,6 +45,42 @@ jQuery(function($){
         { hex: 0x33ffff, emissive: 0x005555 } //Cyan
     ];
 
+    function createFuseSparks(){
+        const sparkGroup = new THREE.Group();
+        const sparkGeometry = new THREE.SphereGeometry(0.1, 6, 6);
+        const sparkMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffcc00,
+            depthTest: false
+        });
+        const particleCount = 16;
+        const sparks = [];
+
+        for (let i = 0; i < particleCount; i++){
+            const spark = new THREE.Mesh(
+                sparkGeometry,
+                sparkMaterial.clone()
+            );
+
+            spark.position.set(
+                (Math.random() - 0.5) * 0.15,
+                Math.random() * 0.15,
+                (Math.random() - 0.5) * 0.15
+            );
+
+            spark.userData.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.012,
+                Math.random() * 0.018 + 0.005,
+                (Math.random() - 0.5) * 0.012
+            );
+
+            sparkGroup.add(spark);
+            sparks.push(spark);
+        }
+
+        sparkGroup.userData.sparks = sparks;
+        return sparkGroup;
+    }
+
     function animate(){
         requestAnimationFrame(animate);
         camera.position.z += (targetCameraZ - camera.position.z) * 0.08;
@@ -52,6 +89,34 @@ jQuery(function($){
         if (camera.position.z > 0 && camera.rotation.x !== 0){
             camera.rotation.x += (0 - camera.rotation.x) * 0.1;
         }
+
+        activeSparks.forEach(sparkGroup => {
+            if (!sparkGroup.visible) return;
+
+            sparkGroup.userData.sparks.forEach(spark => {
+                spark.position.add(spark.userData.velocity);
+                const flicker = Math.random() * 0.8 + 0.5;
+                spark.scale.setScalar(flicker);
+
+                if (
+                    spark.position.y > 0.25 ||
+                    Math.abs(spark.position.x) > 0.18 ||
+                    Math.abs(spark.position.z) > 0.18
+                ) {
+                    spark.position.set(
+                        (Math.random() - 0.5) * 0.04,
+                        0,
+                        (Math.random() - 0.5) * 0.04
+                    );
+
+                    spark.userData.velocity.set(
+                        (Math.random() - 0.5) * 0.012,
+                        Math.random() * 0.04 + 0.005,
+                        (Math.random() - 0.5) * 0.012
+                    );
+                }
+            });
+        })
 
         renderer.render(scene, camera);
     }
@@ -114,6 +179,7 @@ jQuery(function($){
         visualCorridors.forEach(group => scene.remove(group));
         visualCorridors = [];
         bombGroups = [];
+        activeSparks = [];
 
         if (roomGroup) scene.remove(roomGroup);
         roomGroup = new THREE.Group();
@@ -242,6 +308,11 @@ jQuery(function($){
             bombFuse.position.set(0, 1.6, 0);
             bombFuse.rotation.x = -Math.PI / 6;
             bombGroup.add(bombFuse);
+
+            const sparkParticles = createFuseSparks();
+            sparkParticles.position.set(0, 0.4, 0);
+            bombFuse.add(sparkParticles);
+            activeSparks.push(sparkParticles);
 
             bombGroup.position.set(0, 7, -d - 0.5);
             bombGroup.visible = false;
@@ -533,6 +604,7 @@ jQuery(function($){
 
             if (bomb) {
                 bomb.visible = true;
+                if (activeSparks[playerIndex]) activeSparks[playerIndex].visible = true;
                 let bombY = 7;
 
                 setTimeout(() => {
@@ -542,6 +614,8 @@ jQuery(function($){
 
                         if (bombY <= -0.5){
                             clearInterval(dropInterval);
+
+                            if (activeSparks[playerIndex]) activeSparks[playerIndex].visible = false;
 
                             scene.fog.color.setHex(0xff0000);
                             scene.fog.density = 0.03;
