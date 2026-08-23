@@ -612,14 +612,16 @@ jQuery(function($){
                             }, 40);
 
                             setTimeout(function(){
-                                scene.fog.color.setHex(skyColor);
-                                scene.fog.density = 0.005;
+                                playGameOverBurst(function(){
+                                    scene.fog.color.setHex(skyColor);
+                                    scene.fog.density = 0.005;
 
-                                camera.position.set(0, defaultCamY, defaultCamZ);
-                                camera.rotation.set(0, 0, 0);
-                                targetCameraX = 0;
-                                targetCameraZ = defaultCamZ;
-                                gameOver();
+                                    camera.position.set(0, defaultCamY, defaultCamZ);
+                                    camera.rotation.set(0, 0, 0);
+                                    targetCameraX = 0;
+                                    targetCameraZ = defaultCamZ;
+                                    gameOver();
+                                });
                             }, 1800);
                         }
                     }, 20);
@@ -647,6 +649,106 @@ jQuery(function($){
         targetLi.append(friend);
 
         draw3DCorridors();
+    }
+
+    function playGameOverBurst(callback){
+        const overlay = document.createElement("div");
+
+        Object.assign(overlay.style, {
+            position: "fixed",
+            inset: "0",
+            zIndex: "99999",
+            pointerEvents: "none",
+            overflow: "hidden"
+        });
+
+        document.body.appendChild(overlay);
+
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        const sharedCount = 12;
+
+        for (let i = 0; i < sharedCount; i++){
+            const shard = document.createElement("div");
+
+            const angle = (Math.PI * 2 / sharedCount) * i;
+            const distance = Math.max(
+                window.innerWidth,
+                window.innerHeight
+            ) * 0.75;
+
+            const width = 80 + Math.random() * 120;
+            const height = 350 + Math.random() * 350;
+
+            Object.assign(shard.style, {
+                position: "absolute",
+                left: centerX + "px",
+                top: centerY + "px",
+                width: width + "px",
+                height: height + "px",
+                background: "white",
+                clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)",
+                transformOrigin: "50% 0%",
+                opacity: "0",
+                transform: `
+                translate(-50%, 0)
+                rotate(${angle}rad)
+                scaleY(0)`,
+                transition: "transform 450ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease"
+            });
+
+            overlay.appendChild(shard);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    shard.style.opacity = "0.95";
+
+                    shard.style.transform = `
+                    translate(-50%, 0)
+                    rotate(${angle}rad)
+                    scaleY(1)`;
+                });
+            });
+        }
+
+        const flash = document.createElement("div");
+
+        Object.assign(flash.style, {
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            background: "white",
+            transform: "translate(-50%, -50%) scale(0)",
+            opacity: "1",
+            transition: "transform 400ms ease-out, opacity 500ms ease-out"
+        });
+
+        overlay.appendChild(flash);
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                flash.style.transform = "translate(-50%, -50%) scale(35)";
+
+                flash.style.opacity = "0";
+            }, 500);
+        })
+
+        setTimeout(() => {
+            overlay.style.transition = "opacity 200ms ease";
+            overlay.style.opacity = "0";
+        }, 500);
+
+        setTimeout(() => {
+            overlay.remove();
+
+            if (callback){
+                callback();
+            }
+        }, 700);
     }
 
     function gameOver(){
