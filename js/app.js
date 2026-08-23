@@ -37,12 +37,12 @@ jQuery(function($){
     let currentArrowColor = 0xffff00;
 
     const colorPalette = [
-        { hex: 0xff3333, emissive: 0x550000 }, //Red
-        { hex: 0x33ff33, emissive: 0x005500 }, //Green
+        { hex: 0xbd2424, emissive: 0x550000 }, //Red
+        { hex: 0x2da12d, emissive: 0x005500 }, //Green
         { hex: 0x3388ff, emissive: 0x002255 }, //Blue
-        { hex: 0xffff33, emissive: 0x555500 }, //Yellow
-        { hex: 0xff33ff, emissive: 0x550055 }, //Magenta
-        { hex: 0x33ffff, emissive: 0x005555 } //Cyan
+        { hex: 0xebeb05, emissive: 0x555500 }, //Yellow
+        { hex: 0xb830b8, emissive: 0x550055 }, //Magenta
+        { hex: 0x32c2c2, emissive: 0x005555 } //Cyan
     ];
 
     function createFuseSparks(){
@@ -62,16 +62,16 @@ jQuery(function($){
             );
 
             spark.position.set(
-                (Math.random() - 0.5) * 0.15,
-                Math.random() * 0.15,
-                (Math.random() - 0.5) * 0.15
+                (Math.random() - 0.5) * 0.12,
+                (Math.random() - 0.5) * 0.12,
+                (Math.random() - 0.5) * 0.12
             );
 
-            spark.userData.velocity = new THREE.Vector3(
-                (Math.random() - 0.5) * 0.012,
-                Math.random() * 0.018 + 0.005,
-                (Math.random() - 0.5) * 0.012
-            );
+            // spark.userData.velocity = new THREE.Vector3(
+            //     (Math.random() - 0.5) * 0.012,
+            //     Math.random() * 0.018 + 0.005,
+            //     (Math.random() - 0.5) * 0.012
+            // );
 
             sparkGroup.add(spark);
             sparks.push(spark);
@@ -94,27 +94,9 @@ jQuery(function($){
             if (!sparkGroup.visible) return;
 
             sparkGroup.userData.sparks.forEach(spark => {
-                spark.position.add(spark.userData.velocity);
-                const flicker = Math.random() * 0.8 + 0.5;
+                const flicker = Math.random() * 0.7 + 0.5;
                 spark.scale.setScalar(flicker);
-
-                if (
-                    spark.position.y > 0.25 ||
-                    Math.abs(spark.position.x) > 0.18 ||
-                    Math.abs(spark.position.z) > 0.18
-                ) {
-                    spark.position.set(
-                        (Math.random() - 0.5) * 0.04,
-                        0,
-                        (Math.random() - 0.5) * 0.04
-                    );
-
-                    spark.userData.velocity.set(
-                        (Math.random() - 0.5) * 0.012,
-                        Math.random() * 0.04 + 0.005,
-                        (Math.random() - 0.5) * 0.012
-                    );
-                }
+                spark.visible = true;
             });
         })
 
@@ -615,7 +597,7 @@ jQuery(function($){
                         if (bombY <= -0.5){
                             clearInterval(dropInterval);
 
-                            if (activeSparks[playerIndex]) activeSparks[playerIndex].visible = false;
+                            //if (activeSparks[playerIndex]) activeSparks[playerIndex].visible = false;
 
                             scene.fog.color.setHex(0xff0000);
                             scene.fog.density = 0.03;
