@@ -27,6 +27,7 @@ jQuery(function($){
     let targetCameraX = 0;
     let visualCorridors = [];
     let lavaMeshes = [];
+    let bombGroups = [];
     let roomGroup = null; // Container to manage global room geometry cleanly
     let selectionMarker = null;
 
@@ -77,10 +78,42 @@ jQuery(function($){
 
     const tileTexture = createTileTexture();
 
+    function createSpikes(){
+        const spikeGroup = new THREE.Group();
+        const spikeGeom = new THREE.ConeGeometry(0.2, 0.9, 8);
+        const spikeMat = new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            roughness: 0.2,
+            metalness: 0.8
+        });
+
+        const rows = 4;
+        const cols = 3;
+        const spacingX = 0.5;
+        const spacingZ = 0.8;
+
+        for (let r = 0; r < rows; r++){
+            for (let c = 0; c < cols; c++){
+                const spike = new THREE.Mesh(spikeGeom, spikeMat);
+                const xPos = (c - (cols - 1) / 2) * spacingX;
+                const zPos = (r - (rows - 1) / 2) * spacingZ;
+
+                spike.position.set(xPos, -0.8, zPos);
+                spike.rotation.x = -Math.PI / 2;
+
+                spikeGroup.add(spike);
+            }
+        }
+
+        spikeGroup.visible = false;
+        return spikeGroup;
+    }
+
     // 3D translator function
     function draw3DCorridors(){
         visualCorridors.forEach(group => scene.remove(group));
         visualCorridors = [];
+        bombGroups = [];
 
         if (roomGroup) scene.remove(roomGroup);
         roomGroup = new THREE.Group();
@@ -189,6 +222,31 @@ jQuery(function($){
             slide.rotation.x = Math.PI / 2.3;
             slide.position.set(0, -0.8, -d - 2);
             corridorGroup.add(slide);
+
+            const bombGroup = new THREE.Group();
+
+            const bodyGeom = new THREE.SphereGeometry(1.2, 16, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
+            const bombBody = new THREE.Mesh(bodyGeom, bodyMat);
+            bombGroup.add(bombBody);
+
+            const capGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8);
+            const capMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+            const bombCap = new THREE.Mesh(capGeom, capMat);
+            bombCap.position.y  = 1.2;
+            bombGroup.add(bombCap);
+
+            const fuseGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.8, 8);
+            const fuseMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
+            const bombFuse = new THREE.Mesh(fuseGeom, fuseMat);
+            bombFuse.position.set(0, 1.6, 0);
+            bombFuse.rotation.x = -Math.PI / 6;
+            bombGroup.add(bombFuse);
+
+            bombGroup.position.set(0, 7, -d - 0.5);
+            bombGroup.visible = false;
+            bombGroups.push(bombGroup);
+            corridorGroup.add(bombGroup);
 
             if (!isCheckpoint){
                 const lavaGeom = new THREE.PlaneGeometry(2000, 400);
@@ -469,28 +527,48 @@ jQuery(function($){
             gameActive = false;
             clearInterval(autoMoveTimer);
             targetCameraX = offsetPosition;
-            targetCameraZ = -38;
+            targetCameraZ = -26;
 
-            //lavaMeshes.forEach(mesh => mesh.visible = true);
+            const bomb = bombGroups[playerIndex];
 
-            scene.fog.color.setHex(0xff0000);
-            scene.fog.density = 0.04;
-            
-            setTimeout(function(){
-                camera.position.x += (Math.random() - 0.5) * 1.5;
-                camera.position.y += (Math.random() - 0.5) * 1.5;
-            }, 350);
+            if (bomb) {
+                bomb.visible = true;
+                let bombY = 7;
 
-            setTimeout(function(){
-                scene.fog.color.setHex(skyColor);
-                scene.fog.density = 0.005;
+                setTimeout(() => {
+                    const dropInterval = setInterval(() => {
+                        bombY -= 1.0;
+                        bomb.position.y = bombY;
 
-                camera.position.set(0, defaultCamY, defaultCamZ);
-                camera.rotation.set(0, 0, 0);
-                targetCameraX = 0;
-                targetCameraZ = defaultCamZ;
-                gameOver();
-            }, 1200);
+                        if (bombY <= -0.5){
+                            clearInterval(dropInterval);
+
+                            scene.fog.color.setHex(0xff0000);
+                            scene.fog.density = 0.03;
+
+                            let shakeCount = 0;
+                            const shakeInterval = setInterval(function(){
+                                camera.position.x = targetCameraX + (Math.random() - 0.5) * 0.6;
+                                camera.position.y = defaultCamY + (Math.random() - 0.5) * 0.6;
+
+                                shakeCount++;
+                                if (shakeCount > 12) clearInterval(shakeInterval);
+                            }, 40);
+
+                            setTimeout(function(){
+                                scene.fog.color.setHex(skyColor);
+                                scene.fog.density = 0.005;
+
+                                camera.position.set(0, defaultCamY, defaultCamZ);
+                                camera.rotation.set(0, 0, 0);
+                                targetCameraX = 0;
+                                targetCameraZ = defaultCamZ;
+                                gameOver();
+                            }, 1800);
+                        }
+                    }, 20);
+                }, 500);
+            }
         }
     }
 
@@ -506,7 +584,11 @@ jQuery(function($){
 
         var newLis = $(rabbithole).find("li");
         newLis.eq(0).append(player);
-        newLis.eq(0).append(friend);
+        
+        var randomIndex = Math.floor(Math.random() * newLis.length);
+        const targetLi = newLis.eq(randomIndex);
+        targetLi.attr("id", "checkpoint");
+        targetLi.append(friend);
 
         draw3DCorridors();
     }
