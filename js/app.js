@@ -11,7 +11,7 @@ jQuery(function($){
 
     // Camera pos
     const isMobile = window.innerWidth < 1024;
-    const defaultCamY = 1.55;
+    const defaultCamY = 0.8;
     const defaultCamZ = isMobile ? -5 : -2;
     camera.position.set(0, defaultCamY, defaultCamZ);
     camera.lookAt(0, -0.2, -20);
@@ -37,12 +37,13 @@ jQuery(function($){
     let currentArrowColor = 0xffff00;
 
     const colorPalette = [
-        { hex: 0xbd2424, emissive: 0x550000 }, //Red
-        { hex: 0x2da12d, emissive: 0x005500 }, //Green
-        { hex: 0x3388ff, emissive: 0x002255 }, //Blue
-        { hex: 0xebeb05, emissive: 0x555500 }, //Yellow
-        { hex: 0xb830b8, emissive: 0x550055 }, //Magenta
-        { hex: 0x32c2c2, emissive: 0x005555 } //Cyan
+        { hex: 0xff3b30, emissive: 0x661510 }, //Red
+        { hex: 0xff9500, emissive: 0x663800 }, //Orange
+        { hex: 0xffd60a, emissive: 0x665500 }, //Yellow
+        { hex: 0x34c759, emissive: 0x145022 }, //Green
+        { hex: 0x32ade6, emissive: 0x10455c }, //Blue
+        { hex: 0x5856d6, emissive: 0x222157 }, //Indigo
+        { hex: 0xaf52de, emissive: 0x452058 } //Violet
     ];
 
     function createFuseSparks(){
@@ -104,27 +105,6 @@ jQuery(function($){
     }
     animate();
 
-    function createTileTexture(){
-        const canvas = document.createElement("canvas");
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext("2d");
-
-        ctx.fillStyle = "#f0f4f8";
-        ctx.fillRect(0, 0, 256, 256);
-
-        ctx.strokeStyle = "#c0c9d0";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(0, 0, 256, 256);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        return texture;
-    }
-
-    const tileTexture = createTileTexture();
-
     function createSpikes(){
         const spikeGroup = new THREE.Group();
         const spikeGeom = new THREE.ConeGeometry(0.2, 0.9, 8);
@@ -156,6 +136,68 @@ jQuery(function($){
         return spikeGroup;
     }
 
+    function createRainbowRibbon(color, laneIndex, laneCount, laneWidth = 3.5){
+        const geometry = new THREE.BufferGeometry();
+
+        const segments = 220;
+        const depth = 280;
+
+        const vertices = [];
+        const indices = [];
+
+        // What color lanes sits across the rainbow
+        const laneOffset = (laneIndex - (laneCount - 1) / 2) * laneWidth;
+
+        for (let i = 0; i <= segments; i++){
+            const progress = i / segments;
+
+            const z = -4 - progress * depth;
+
+            const curveX = Math.sin(progress * Math.PI * 1.15) * 12 * progress;
+
+            const curveY = -1.5 + Math.pow(progress, 1.7) * 17;
+
+            const spread = 1 + progress * 0.5;
+
+            const centerX = curveX + laneOffset * spread;
+
+            const halfWidth = laneWidth / 2;
+
+            vertices.push(centerX - halfWidth, curveY, z);
+
+            vertices.push(centerX + halfWidth, curveY, z);
+        }
+
+        for (let i = 0; i < segments; i++){
+            const current = i * 2;
+            const next = current + 2;
+
+            indices.push(current, next, current + 1);
+
+            indices.push(next, next + 1, current + 1);
+        }
+
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+
+        geometry.setIndex(indices);
+
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.18,
+            transparent: true,
+            opacity: 0.82,
+            roughness: 0.35,
+            metalness: 0,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+
+        return new THREE.Mesh(geometry, material);
+    }
+
     // 3D translator function
     function draw3DCorridors(){
         visualCorridors.forEach(group => scene.remove(group));
@@ -170,235 +212,175 @@ jQuery(function($){
 
         const totalOptions = $(rabbithole).find("li");
 
-        const spacing = 5;
-        const h = 4;
-        const d = 30;
-        const roomWidth = Math.max(totalOptions.length * spacing, 30);
+        const spacing = 3.5;
 
         const shuffledPalette = [...colorPalette].sort(() => Math.random() - 0.5);
+
         const winningIndex = Math.floor(Math.random() * totalOptions.length);
 
         let laneColors = [];
 
         totalOptions.each(function(index){
-            const colorObj = shuffledPalette[index % shuffledPalette.length];
+            const colorObj = shuffledPalette[index];
+
+            const rainbowIndex = colorPalette.findIndex(
+                item => item.hex === colorObj.hex
+            );
+
             laneColors.push(colorObj);
+
             $(this).data("slideColor", colorObj.hex);
+
+            $(this).data("rainbowIndex", rainbowIndex);
 
             if (index === winningIndex){
                 currentArrowColor = colorObj.hex;
             }
         });
 
-        totalOptions.each(function(index){
-            const layoutOffset = (index - (totalOptions.length - 1) / 2) * spacing;
-
+        colorPalette.forEach(function(colorObj, index){
             const corridorGroup = new THREE.Group();
-            const colorObj = laneColors[index];
 
-            const isCheckpoint = ($(this).attr("id") === "checkpoint");
-            const wallColor = isCheckpoint ? 0x00ffcc : 0x005588; 
-            const trimColor = isCheckpoint ? 0xffd700 : 0x0088cc;
+            const rainbowLane = createRainbowRibbon(
+                colorObj.hex,
+                index,
+                colorPalette.length,
+                spacing
+            );
 
-            const corridorWallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.6, side: THREE.DoubleSide });
-            const trimMat = new THREE.LineBasicMaterial({ color: trimColor, linewidth: 2 });
-
-            // Left Wall
-            // const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
-            // leftWall.position.set(-w/2, 0, 0);
-            // leftWall.rotation.y = Math.PI / 2;
-            // corridorGroup.add(leftWall);
-
-            // // Right Wall
-            // const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), corridorWallMat);
-            // rightWall.position.set(w/2, 0, 0);
-            // rightWall.rotation.y = -Math.PI / 2;
-            // corridorGroup.add(rightWall);
-
-            const ropeColor = isCheckpoint ? 0xffd700 : 0x0088cc;
-            const ropeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-
-            const ropeGeom = new THREE.CylinderGeometry(0.12, 0.12, d, 8);
-
-            const leftRope = new THREE.Mesh(ropeGeom, ropeMat);
-            leftRope.position.set(-spacing / 2, -h / 2 + 1.2, -d / 2);
-            leftRope.rotation.x = Math.PI / 2;
-            corridorGroup.add(leftRope);
-
-            const rightRope = new THREE.Mesh(ropeGeom, ropeMat);
-            rightRope.position.set(spacing / 2, -h / 2 + 1.2, -d / 2);
-            rightRope.rotation.x = Math.PI / 2;
-            corridorGroup.add(rightRope);
-
-            // const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 0.8 });
-            // const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), backWallMat);
-            // backWall.position.set(0, 0, -d/2);
-            // corridorGroup.add(backWall);
-
-            // Swimming T markers
-            const centerLineGeom = new THREE.PlaneGeometry(0.2, d - 4);
-            const tMat = new THREE.MeshBasicMaterial({ color: 0x001122, side: THREE.DoubleSide });
-            const centerLine = new THREE.Mesh(centerLineGeom, tMat);
-            centerLine.rotation.x = -Math.PI / 2;
-            centerLine.position.set(0, -h / 2 + 0.02, 1);
-            corridorGroup.add(centerLine);
-
-            const crossbarGeom = new THREE.PlaneGeometry(1.2, 0.2);
-            const crossbar = new THREE.Mesh(crossbarGeom, tMat);
-            crossbar.rotation.x = -Math.PI / 2;
-            crossbar.position.set(0, -h / 2 + 0.02, -d / 2 + 1.5);
-            corridorGroup.add(crossbar);
-
-            // Waterslide at lane end
-            const slideGeom = new THREE.CylinderGeometry(1.8, 1.8, 20, 16, 1, true, 0, Math.PI * 2);
-
-            const slideColor = isCheckpoint ? 0xffaa00 : 0xff00de;
-
-            const emissiveColor = isCheckpoint ? 0x004433 : 0x991100;
-
-            const slideMat = new THREE.MeshStandardMaterial({
-                color: colorObj.hex,
-                emissive: colorObj.emissive,
-                emissiveIntensity: 0.6,
-                roughness: 0.2,
-                side: THREE.DoubleSide
-            });
-
-            const slide = new THREE.Mesh(slideGeom, slideMat);
-
-            //slide.rotation.z = Math.PI;
-            slide.rotation.x = Math.PI / 2.3;
-            slide.position.set(0, -0.8, -d - 2);
-            corridorGroup.add(slide);
-
-            const bombGroup = new THREE.Group();
-
-            const bodyGeom = new THREE.SphereGeometry(1.2, 16, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
-            const bombBody = new THREE.Mesh(bodyGeom, bodyMat);
-            bombGroup.add(bombBody);
-
-            const capGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8);
-            const capMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
-            const bombCap = new THREE.Mesh(capGeom, capMat);
-            bombCap.position.y  = 1.2;
-            bombGroup.add(bombCap);
-
-            const fuseGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.8, 8);
-            const fuseMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
-            const bombFuse = new THREE.Mesh(fuseGeom, fuseMat);
-            bombFuse.position.set(0, 1.6, 0);
-            bombFuse.rotation.x = -Math.PI / 6;
-            bombGroup.add(bombFuse);
-
-            const sparkParticles = createFuseSparks();
-            sparkParticles.position.set(0, 0.4, 0);
-            bombFuse.add(sparkParticles);
-            activeSparks.push(sparkParticles);
-
-            bombGroup.position.set(0, 7, -d - 0.5);
-            bombGroup.visible = false;
-            bombGroups.push(bombGroup);
-            corridorGroup.add(bombGroup);
-
-            if (!isCheckpoint){
-                const lavaGeom = new THREE.PlaneGeometry(2000, 400);
-                const lavaMat = new THREE.MeshBasicMaterial({
-                    color: 0xff2200,
-                    side: THREE.DoubleSide
-                });
-                const lavaPit = new THREE.Mesh(lavaGeom, lavaMat);
-                lavaPit.rotation.x = -Math.PI / 2;
-                lavaPit.position.set(0, -11.4, -d - 40);
-                lavaPit.visible = false;
-                corridorGroup.add(lavaPit);
-                lavaMeshes.push(lavaPit);
-            }
-
-            corridorGroup.position.set(layoutOffset, 0, 0);
+            corridorGroup.add(rainbowLane);
 
             scene.add(corridorGroup);
+
             visualCorridors.push(corridorGroup);
         });
 
-        // Shared Room Structure
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a4b6e, roughness: 0.2 });
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45 });
-        const outerWallMat = new THREE.MeshStandardMaterial({ color: 0x0a2d4a, roughness: 0.7, side: THREE.DoubleSide });
+        totalOptions.each(function(index){
+            const rainbowIndex = $(this).data("rainbowIndex");
 
-        const totalWorldDepth = 300;
-        const groundDepth = d + 20;
+            const laneX = (
+                rainbowIndex - (colorPalette.length - 1) / 2
+            ) * spacing;
 
-        const upperDepth = d;
-        const upperFloorMat = new THREE.MeshStandardMaterial({ color: 0x0a4b6e, roughness: 0.2 });
-        const upperWaterMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45 });
+            const bombGroup =
+                new THREE.Group();
 
-        const upperWater = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, upperDepth), upperWaterMat);
-        upperWater.position.set(0, -h / 2 + 1.2, -upperDepth / 2);
-        upperWater.rotation.x = -Math.PI / 2;
-        roomGroup.add(upperWater);
 
-        const upperFloor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, upperDepth), upperFloorMat);
-        upperFloor.position.set(0, -h / 2, -upperDepth / 2);
-        upperFloor.rotation.x = -Math.PI / 2;
-        roomGroup.add(upperFloor);
+            const bodyGeom =
+                new THREE.SphereGeometry(
+                    1.2,
+                    16,
+                    16
+                );
 
-        const poolY = -12;
-        const basinDepth = 150;
-        const basinWidth = roomWidth + 80;
+            const bodyMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x111111,
+                    roughness: 0.4
+                });
 
-        const lowerFloor = new THREE.Mesh(new THREE.PlaneGeometry(basinWidth, basinDepth), upperFloorMat);
+            const bombBody =
+                new THREE.Mesh(
+                    bodyGeom,
+                    bodyMat
+                );
 
-        lowerFloor.position.set(0, poolY, -d - (basinDepth / 2));
+            bombGroup.add(
+                bombBody
+            );
 
-        lowerFloor.rotation.x = -Math.PI / 2;
-        roomGroup.add(lowerFloor);
 
-        const lowerWater = new THREE.Mesh(new THREE.PlaneGeometry(basinWidth, basinDepth), upperWaterMat);
-        lowerWater.position.set(0, poolY + 6.0, -d - (basinDepth / 2));
-        lowerWater.rotation.x = -Math.PI / 2;
-        roomGroup.add(lowerWater);
+            const capGeom =
+                new THREE.CylinderGeometry(
+                    0.3,
+                    0.3,
+                    0.3,
+                    8
+                );
 
-        const tiledWallTexture = tileTexture.clone();
-        tiledWallTexture.needsUpdate = true;
-        tiledWallTexture.repeat.set(50, 6);
+            const capMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0x888888,
+                    metalness: 0.8,
+                    roughness: 0.2
+                });
 
-        const tileWallMat = new THREE.MeshStandardMaterial({
-            map: tiledWallTexture,
-            roughness: 0.3,
-            metalness: 0.1,
-            side: THREE.DoubleSide
+            const bombCap =
+                new THREE.Mesh(
+                    capGeom,
+                    capMat
+                );
+
+            bombCap.position.y = 1.2;
+
+            bombGroup.add(
+                bombCap
+            );
+
+            const fuseGeom =
+                new THREE.CylinderGeometry(
+                    0.06,
+                    0.06,
+                    0.8,
+                    8
+                );
+
+            const fuseMat =
+                new THREE.MeshStandardMaterial({
+                    color: 0xd2b48c,
+                    roughness: 0.9
+                });
+
+            const bombFuse =
+                new THREE.Mesh(
+                    fuseGeom,
+                    fuseMat
+                );
+
+            bombFuse.position.set(
+                0,
+                1.6,
+                0
+            );
+
+            bombFuse.rotation.x =
+                -Math.PI / 6;
+
+            bombGroup.add(
+                bombFuse
+            );
+
+            const sparkParticles =
+                createFuseSparks();
+
+            sparkParticles.position.set(
+                0,
+                0.4,
+                0
+            );
+
+            bombFuse.add(
+                sparkParticles
+            );
+
+            activeSparks.push(
+                sparkParticles
+            );
+
+            bombGroup.position.set(
+                laneX,
+                7,
+                -30
+            );
+
+            bombGroup.visible = false;
+            
+            bombGroups.push(
+                bombGroup
+            );
+
+            scene.add(bombGroup);
         });
-
-        const ledgeWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, Math.abs(poolY - (-h / 2))), tileWallMat);
-        ledgeWall.position.set(0, (poolY + (-h / 2)) / 2, -d);
-        roomGroup.add(ledgeWall);
-
-        const wallDepth = 300;
-        const wallHeight = h * 10;
-
-        const farLeftWall = new THREE.Mesh(new THREE.PlaneGeometry(wallDepth, wallHeight), tileWallMat);
-        farLeftWall.position.set(-roomWidth / 2 - 2, poolY / 2, -wallDepth / 2 + 20);
-        farLeftWall.rotation.y = Math.PI / 2;
-        roomGroup.add(farLeftWall);
-
-        const farRightWall = new THREE.Mesh(new THREE.PlaneGeometry(wallDepth, wallHeight), tileWallMat);
-        farRightWall.position.set(roomWidth / 2 + 2, poolY / 2, -wallDepth / 2 + 20);
-        farRightWall.rotation.y = -Math.PI / 2;
-        roomGroup.add(farRightWall);
-
-        // Floor and Ceiling Grid Helpers (fixed THREE.GridHelper spelling)
-        // const floorGrid = new THREE.GridHelper(roomWidth, totalOptions.length, 0x00ffcc, 0x334455);
-        // floorGrid.position.set(0, -h / 2 + 0.01, -d / 2);
-        // roomGroup.add(floorGrid);
-
-        // const ceilingGrid = new THREE.GridHelper(roomWidth, totalOptions.length, 0xff00ff, 0x334455);
-        // ceilingGrid.position.set(0, h / 2 - 0.01, -d / 2);
-        // roomGroup.add(ceilingGrid);
-
-        // const globalBackWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, h), outerWallMat);
-        // globalBackWall.position.set(0, 0, -d);
-        // roomGroup.add(globalBackWall);
 
         if (selectionMarker) scene.remove(selectionMarker);
 
@@ -412,11 +394,13 @@ jQuery(function($){
         selectionMarker = new THREE.Mesh(markerGeom, markerMat);
         selectionMarker.rotation.x = Math.PI;
 
-        const initialTiles = $(rabbithole).find("li");
-        const pIndex = initialTiles.index(player.parent());
-        const startX = pIndex > -1 ? (pIndex - (initialTiles.length - 1) / 2) * spacing: 0;
+        const initialTile = player.parent();
+        const initialRainbowIndex = initialTile.data("rainbowIndex");
+        const startX = Number.isFinite(initialRainbowIndex) ? (
+            initialRainbowIndex - (colorPalette.length - 1) / 2
+        ) * spacing : 0;
 
-        selectionMarker.position.set(startX, 4.5, -d - 2);
+        selectionMarker.position.set(startX, 4, -28);
         scene.add(selectionMarker);
         scene.add(roomGroup);
     }
@@ -475,9 +459,13 @@ jQuery(function($){
         var initialTiles = $(rabbithole).find("li");
         var initialIndex = initialTiles.index(player.parent());
         if (selectionMarker && initialIndex !== -1){
-            const spacing = 5;
-            const activeX = (initialIndex - (initialTiles.length - 1) / 2) * spacing;
-            selectionMarker.position.set(activeX, 4.5, -42);
+            const spacing = 3.5;
+            const initialTile = player.parent();
+            const rainbowIndex = initialTile.data("rainbowIndex");
+            const activeX = (
+                rainbowIndex - (colorPalette.length - 1) / 2
+            ) * spacing;
+            selectionMarker.position.set(activeX, 4, -28);
         }
 
         autoMoveTimer = setInterval(function(){
@@ -497,14 +485,23 @@ jQuery(function($){
             var targetTile = allTiles.eq(targetIndex);
             player.appendTo(targetTile);
 
-            const spacing = 5;
-            const activeX = (targetIndex - (allTiles.length - 1) / 2) * spacing;
+            const spacing = 3.5;
+            const rainbowIndex = targetTile.data("rainbowIndex");
+
+            const activeX = (
+                rainbowIndex - (colorPalette.length - 1) / 2
+            ) * spacing;
+
             targetCameraX = activeX;
 
-            visualCorridors.forEach(box => box.scale.set(1, 1, 1));
+            visualCorridors.forEach(
+                box => box.scale.set(1, 1, 1)
+            );
 
-            if (selectionMarker) {
-                selectionMarker.position.set(activeX, 4.5, -42);
+            if (selectionMarker){
+                selectionMarker.position.set(
+                    activeX, 4, -28
+                );
             }
         }, 400);
     }
@@ -531,8 +528,12 @@ jQuery(function($){
         var allTiles = $(rabbithole).find("li");
         var playerIndex = allTiles.index(playerTile);
         
-        const spacing = 5;
-        const offsetPosition = (playerIndex - (allTiles.length - 1) / 2) * spacing;
+        const spacing = 3.5;
+        const rainbowIndex = playerTile.data("rainbowIndex");
+        const offsetPosition = (
+            rainbowIndex - 
+            (colorPalette.length - 1) / 2
+        ) * spacing;
         targetCameraX = offsetPosition;
         
         var playerSlideColor = playerTile.data("slideColor");
@@ -540,24 +541,9 @@ jQuery(function($){
             console.log("correct");
             score++;
             $("#msg").text(score);
-            var activeTile = $("#checkpoint");
-
-            lavaMeshes.forEach(mesh => mesh.visible = false);
 
             targetCameraX = offsetPosition;
-            targetCameraZ = -38;
-
-            setTimeout(function(){
-                camera.rotation.x = -Math.PI / 4;
-                camera.position.y = -8;
-                targetCameraZ = -45;
-            }, 450);
-
-            setTimeout(function(){
-                camera.rotation.x = -Math.PI / 6;
-                camera.position.y = 0.5;
-                targetCameraZ = -42;
-            }, 450);
+            targetCameraZ = -24;
 
             setTimeout(function(){
                 spawnPaths();
@@ -566,7 +552,7 @@ jQuery(function($){
                 targetCameraX = 0;
                 targetCameraZ = defaultCamZ;
                 startAutoMovement();
-            }, 1200);
+            }, 900);
             
             // setTimeout(function(){
             //     spawnPaths(activeTile);
