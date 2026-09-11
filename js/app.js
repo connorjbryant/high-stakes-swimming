@@ -35,11 +35,12 @@ jQuery(function($){
     var score = 0;
     var gameActive = false;
     let currentArrowColor = 0xffff00;
+    let currentWinningRainbowIndex = null;
 
     const colorPalette = [
         { hex: 0xff3b30, emissive: 0x661510 }, //Red
         { hex: 0xff9500, emissive: 0x663800 }, //Orange
-        { hex: 0xffd60a, emissive: 0x665500 }, //Yellow
+        { hex: 0xfff70a, emissive: 0xe6c005 }, //Yellow
         { hex: 0x34c759, emissive: 0x145022 }, //Green
         { hex: 0x32ade6, emissive: 0x10455c }, //Blue
         { hex: 0x5856d6, emissive: 0x222157 }, //Indigo
@@ -200,9 +201,18 @@ jQuery(function($){
 
     // 3D translator function
     function draw3DCorridors(){
-        visualCorridors.forEach(group => scene.remove(group));
+        visualCorridors.forEach(function(group){
+            scene.remove(group);
+        });
+
         visualCorridors = [];
+
+        bombGroups.forEach(function(bomb){
+            scene.remove(bomb);
+        });
+
         bombGroups = [];
+
         activeSparks = [];
 
         if (roomGroup) scene.remove(roomGroup);
@@ -216,27 +226,170 @@ jQuery(function($){
 
         const shuffledPalette = [...colorPalette].sort(() => Math.random() - 0.5);
 
-        const winningIndex = Math.floor(Math.random() * totalOptions.length);
+        let nextWinningRainbowIndex;
 
-        let laneColors = [];
+        if (currentWinningRainbowIndex === null){
+            nextWinningRainbowIndex = Math.floor(Math.random() * colorPalette.length);
+        } else {
+            const possibleWinners = [];
+
+            const leftIndex = currentWinningRainbowIndex - 1;
+
+            const rightIndex = currentWinningRainbowIndex + 1;
+
+            if (leftIndex >= 0){
+                possibleWinners.push(leftIndex);
+            }
+
+            if (rightIndex < colorPalette.length){
+                possibleWinners.push(rightIndex);
+            }
+
+            nextWinningRainbowIndex = possibleWinners[
+                Math.floor(Math.random() * possibleWinners.length)
+            ];
+        }
+
+        let centerIndex;
+
+        if (currentWinningRainbowIndex === null){
+            centerIndex = nextWinningRainbowIndex;
+        } else {
+            centerIndex = currentWinningRainbowIndex;
+        }
+
+        const winningColor = colorPalette[nextWinningRainbowIndex];
+
+        let allowedIndexes = [];
+
+        if (centerIndex - 1 >= 0){
+            allowedIndexes.push(
+                centerIndex - 1
+            );
+        }
+
+        allowedIndexes.push(
+            centerIndex
+        );
+
+        if (
+            centerIndex + 1 < colorPalette.length
+        ){
+            allowedIndexes.push(
+                centerIndex + 1
+            );
+        }
+
+        if (
+            !allowedIndexes.includes(
+                nextWinningRainbowIndex
+            )
+        ){
+            allowedIndexes.push(
+                nextWinningRainbowIndex
+            );
+        }
+
+        allowedIndexes.sort(
+            (a, b) => a - b
+        );
+
+        if (
+            allowedIndexes.length < totalOptions.length
+        ){
+            if (
+                allowedIndexes[0] === 0 && allowedIndexes.length === 2
+            ){
+                allowedIndexes.push(2);
+            }
+
+            if (
+                allowedIndexes[
+                    allowedIndexes.length - 1
+                ] === colorPalette.length - 1 && allowedIndexes.length === 2
+            ){
+                allowedIndexes.unshift(
+                    colorPalette.length - 3
+                );
+            }
+        }
+
+        let playableColors = allowedIndexes.map(
+            index => colorPalette[index]
+        );
+
+        if (
+            playableColors.length > totalOptions.length
+        ){
+            if (totalOptions.length === 2){
+                const winnerPosition = playableColors.findIndex(
+                    color => color.hex === winningColor.hex
+                );
+
+                if (winnerPosition === 0){
+                    playableColors = playableColors.slice(0, 2);
+                } else if (
+                    winnerPosition === playableColors.length - 1
+                ){
+                    playableColors = playableColors.slice(-2);
+                } else {
+                    if (Math.random() < 0.5){
+                        playableColors = playableColors.slice(
+                            winnerPosition - 1,
+                            winnerPosition + 1
+                        );
+                    } else {
+                        playableColors = playableColors.slice(
+                            winnerPosition,
+                            winnerPosition + 2
+                        );
+                    }
+                }
+            }
+        }
+
+        playableColors = playableColors.slice(
+            0, totalOptions.length
+        );
+
+        playableColors.sort(function(a, b){
+            return (
+                colorPalette.findIndex(
+                    color => color.hex === a.hex
+                ) - colorPalette.findIndex(
+                    color => color.hex === b.hex
+                )
+            );
+        });
 
         totalOptions.each(function(index){
-            const colorObj = shuffledPalette[index];
+            const colorObj = playableColors[index];
 
             const rainbowIndex = colorPalette.findIndex(
                 item => item.hex === colorObj.hex
             );
 
-            laneColors.push(colorObj);
+            $(this).data(
+                "slideColor",
+                colorObj.hex
+            );
 
-            $(this).data("slideColor", colorObj.hex);
+            $(this).data(
+                "rainbowIndex",
+                rainbowIndex
+            );
 
-            $(this).data("rainbowIndex", rainbowIndex);
-
-            if (index === winningIndex){
+            if (
+                rainbowIndex === nextWinningRainbowIndex
+            ){
                 currentArrowColor = colorObj.hex;
             }
         });
+
+        totalOptions.data(
+            "winningRainbowIndex",
+            nextWinningRainbowIndex
+        );
 
         colorPalette.forEach(function(colorObj, index){
             const corridorGroup = new THREE.Group();
@@ -449,6 +602,8 @@ jQuery(function($){
         targetCameraX = 0;
         targetCameraZ = defaultCamZ;
         camera.position.set(0, defaultCamY, defaultCamZ);
+        currentWinningRainbowIndex = null;
+        moveDirection = 1;
         draw3DCorridors();
         startAutoMovement();
     });
@@ -542,6 +697,8 @@ jQuery(function($){
             score++;
             $("#msg").text(score);
 
+            currentWinningRainbowIndex = playerTile.data("rainbowIndex");
+
             targetCameraX = offsetPosition;
             targetCameraZ = -24;
 
@@ -620,18 +777,47 @@ jQuery(function($){
         //activeTile.removeAttr("id");
         $(rabbithole).empty();
 
-        var hallwayCount = Math.floor(Math.random() * 2) + 2;
+        let hallwayCount;
 
-        for (var i = 0; i < hallwayCount; i++){
+        if (currentWinningRainbowIndex !== null){
+            let nearbyCount = 1;
+
+            if (currentWinningRainbowIndex > 0){
+                nearbyCount++;
+            }
+
+            if (
+                currentWinningRainbowIndex < colorPalette.length - 1
+            ){
+                nearbyCount++;
+            }
+
+            if (nearbyCount >= 3){
+                hallwayCount = Math.floor(Math.random() * 2) + 2;
+            } else {
+                hallwayCount = nearbyCount;
+            }
+        } else {
+            hallwayCount = Math.floor(Math.random() * 2) + 2;
+        }
+
+        for (let i = 0; i < hallwayCount; i++){
             $(rabbithole).append("<li></li>");
         }
 
-        var newLis = $(rabbithole).find("li");
+        const newLis = $(rabbithole).find("li");
+
         newLis.eq(0).append(player);
-        
-        var randomIndex = Math.floor(Math.random() * newLis.length);
+
+        const randomIndex = Math.floor(Math.random() * newLis.length);
+
         const targetLi = newLis.eq(randomIndex);
-        targetLi.attr("id", "checkpoint");
+
+        targetLi.attr(
+            "id",
+            "checkpoint"
+        );
+
         targetLi.append(friend);
 
         draw3DCorridors();
@@ -793,6 +979,9 @@ jQuery(function($){
 
         allLis.attr("id", "checkpoint");
         targetLi.append(friend);
+
+        currentWinningRainbowIndex = null;
+        moveDirection = 1;
 
         draw3DCorridors();
         startAutoMovement();
