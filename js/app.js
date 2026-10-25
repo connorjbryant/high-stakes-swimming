@@ -26,6 +26,7 @@ jQuery(function($){
     let targetCameraZ = defaultCamZ;
     let targetCameraX = 0;
     let visualCorridors = [];
+    let roadMarkers = [];
     let lavaMeshes = [];
     let bombGroups = [];
     let activeSparks = [];
@@ -83,8 +84,15 @@ jQuery(function($){
         return sparkGroup;
     }
 
+    const clock = new THREE.Clock();
+
     function animate(){
         requestAnimationFrame(animate);
+
+        const delta = Math.min(clock.getDelta(), 0.05);
+        if (gameActive){
+            updateRoadMarkers(delta);
+        }
         camera.position.z += (targetCameraZ - camera.position.z) * 0.08;
         camera.position.x += (targetCameraX - camera.position.x) * 0.08;
 
@@ -154,9 +162,12 @@ jQuery(function($){
 
             const z = -4 - progress * depth;
 
-            const curveX = Math.sin(progress * Math.PI * 1.15) * 12 * progress;
+            const curveX = Math.sin(progress * Math.PI * 3) * 10 * progress;
 
-            const curveY = -1.5 + Math.pow(progress, 1.7) * 17;
+            // Climb up, crest, and descend
+            const hillHeight = 18;
+
+            const curveY = -1.5 + Math.pow(progress, 1.7) * hillHeight;
 
             const spread = 1 + progress * 0.5;
 
@@ -199,6 +210,66 @@ jQuery(function($){
         return new THREE.Mesh(geometry, material);
     }
 
+    function createRoadMarkers(winningRainbowIndex){
+        const markerCount = 35;
+        for (let i = 0; i < markerCount; i++){
+            const geometry = new THREE.PlaneGeometry(0.18, 1.5);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.65,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            const marker = new THREE.Mesh(geometry, material);
+            marker.rotation.x = -Math.PI / 2;
+            marker.userData.progress = i / markerCount;
+            marker.userData.rainbowIndex = winningRainbowIndex;
+            roadMarkers.push(marker);
+            scene.add(marker);
+        }
+    }
+
+    function updateRoadMarkers(delta){
+        roadMarkers.forEach(function(marker){
+            let progress = marker.userData.progress;
+
+            progress -= delta * 0.08;
+
+            if (progress < 0){
+                progress += 1;
+            }
+
+            marker.userData.progress = progress;
+
+            const z = -4 - progress * 280;
+
+            const curveX = Math.sin(progress * Math.PI * 3) * 10 * progress;
+
+            const hillHeight = 18;
+
+            const curveY = -1.5 + Math.pow(progress, 1.7) * hillHeight;
+
+            const laneWidth = 3.5;
+            const laneCount = colorPalette.length;
+
+            const laneOffset = (
+                marker.userData.rainbowIndex - (laneCount - 1) / 2
+            ) * laneWidth;
+
+            const spread = 1 + progress * 0.5;
+
+            const centerX = curveX + laneOffset * spread;
+
+            marker.position.set(
+                centerX,
+                curveY + 0.04,
+                z
+            );
+        });
+    }
+
     // 3D translator function
     function draw3DCorridors(){
         visualCorridors.forEach(function(group){
@@ -206,6 +277,14 @@ jQuery(function($){
         });
 
         visualCorridors = [];
+
+        roadMarkers.forEach(function(marker){
+            scene.remove(marker);
+            marker.geometry.dispose();
+            marker.material.dispose();
+        });
+
+        roadMarkers = [];
 
         bombGroups.forEach(function(bomb){
             scene.remove(bomb);
@@ -407,6 +486,8 @@ jQuery(function($){
 
             visualCorridors.push(corridorGroup);
         });
+
+        createRoadMarkers(nextWinningRainbowIndex);
 
         totalOptions.each(function(index){
             const rainbowIndex = $(this).data("rainbowIndex");
